@@ -234,10 +234,47 @@ export function updateCustomer(id: string, data: Partial<Customer>): Customer {
     const wasActive = ACTIVE_LEAD_STATUSES.includes(existing.status);
     const isNowInactive = data.status && ['CONVERTED', 'CLOSED_LOST'].includes(data.status);
 
-    customers[index] = { ...customers[index], ...data, updatedAt: new Date().toISOString() };
+    // Synchronize status and milestoneStep bidirectionally
+    let syncedMilestoneStep = data.milestoneStep !== undefined ? data.milestoneStep : existing.milestoneStep;
+    let syncedStatus = data.status || existing.status;
+
+    if (data.status && data.milestoneStep === undefined) {
+      if (data.status === 'SURVEY_DONE') syncedMilestoneStep = 1;
+      else if (data.status === 'QUOTATION_SENT') syncedMilestoneStep = 2;
+      else if (data.status === 'CONVERTED') syncedMilestoneStep = Math.max(syncedMilestoneStep || 0, 3);
+      else if (['NEW', 'CONTACTED', 'QUEUED'].includes(data.status)) syncedMilestoneStep = 0;
+    } else if (data.milestoneStep !== undefined && !data.status) {
+      if (data.milestoneStep === 0) syncedStatus = 'NEW';
+      else if (data.milestoneStep === 1) syncedStatus = 'SURVEY_DONE';
+      else if (data.milestoneStep === 2) syncedStatus = 'QUOTATION_SENT';
+      else if (data.milestoneStep >= 3) syncedStatus = 'CONVERTED';
+    }
+
+    customers[index] = {
+      ...customers[index],
+      ...data,
+      status: syncedStatus,
+      milestoneStep: syncedMilestoneStep,
+      updatedAt: new Date().toISOString(),
+    };
 
     if (wasActive && isNowInactive && existing.assignedTo) {
       processQueuedOffline(existing.assignedTo);
+    }
+
+    // Keep active customer session in localStorage synchronized
+    if (typeof window !== 'undefined') {
+      try {
+        const rawSession = localStorage.getItem('sunpower_customer_session');
+        if (rawSession) {
+          const parsed = JSON.parse(rawSession);
+          if (parsed.id === id || parsed.phone === customers[index].phone) {
+            localStorage.setItem('sunpower_customer_session', JSON.stringify(customers[index]));
+          }
+        }
+      } catch (err) {
+        // ignore
+      }
     }
 
     persistDb();

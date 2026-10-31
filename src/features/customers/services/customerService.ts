@@ -131,6 +131,15 @@ export const customerService = {
   },
 
   /**
+   * Updates customer project milestone stage and pipeline status
+   */
+  async updateCustomerMilestone(id: string, milestoneStep: number, status?: EnquiryStatus): Promise<Customer | undefined> {
+    const updates: Partial<Customer> = { milestoneStep };
+    if (status) updates.status = status;
+    return this.updateCustomer(id, updates);
+  },
+
+  /**
    * Deletes a customer record
    */
   async deleteCustomer(id: string): Promise<boolean> {

@@ -24,6 +24,7 @@ export interface Customer {
   subsidyRequired: boolean;
   enquirySource: EnquirySource;
   status: EnquiryStatus;
+  milestoneStep?: number; // 0: Inquiry, 1: Survey, 2: Quotation, 3: DISCOM, 4: Installation, 5: Commissioned
   notes: string;
   assignedTo: string; // sales person name
   createdAt: string;

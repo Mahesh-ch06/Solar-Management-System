@@ -13,12 +13,14 @@ import {
   installationJobs,
   warrantyRecords,
 } from '../../store/inMemoryDb';
-import { Customer } from '../../types/customer';
+import { Customer, EnquiryStatus } from '../../types/customer';
 import { WarrantyRecord } from '../../types/operations';
 import {
   getStoredCustomerSession,
   clearCustomerSession,
+  setCustomerSession,
 } from './CustomerAuthPage';
+import { customerService } from '../customers/services/customerService';
 import {
   SunMedium,
   Search,
@@ -76,6 +78,25 @@ export const CustomerPortalPage: React.FC = () => {
     }
   }, [searchParams]);
 
+  // Keep customer state fresh against inMemoryDb whenever store changes
+  useEffect(() => {
+    if (customer?.id || customer?.phone) {
+      const fresh = customers.find(
+        (c) => (customer.id && c.id === customer.id) || (customer.phone && c.phone === customer.phone)
+      );
+      if (fresh) {
+        if (
+          fresh.status !== customer.status ||
+          fresh.milestoneStep !== customer.milestoneStep ||
+          fresh.name !== customer.name ||
+          fresh.assignedTo !== customer.assignedTo
+        ) {
+          setCustomer(fresh);
+        }
+      }
+    }
+  }, [customers, customer?.id, customer?.phone, customer?.status, customer?.milestoneStep]);
+
   const handleSignOut = () => {
     clearCustomerSession();
     setCustomer(null);
@@ -90,37 +111,90 @@ export const CustomerPortalPage: React.FC = () => {
   const customerJob = customer ? installationJobs.find((j) => j.customerId === customer.id) : undefined;
   const customerWarranties = customer ? warrantyRecords.filter((w) => w.customerId === customer.id) : [];
 
-  // Determine stage progression (0 to 5)
-  const currentStep = !customer
-    ? 0
-    : customerJob?.stage === 'COMMISSIONED'
-    ? 5
-    : customerJob
-    ? 4
-    : customerOrder
-    ? 3
-    : customerQuotation
-    ? 2
-    : customerSurvey
-    ? 1
-    : 0;
-
-  const steps = [
-    { title: 'Inquiry Registered', desc: 'Rooftop consultation booked & site engineer assigned' },
-    { title: 'Site Survey Completed', desc: 'Shadow analysis & 3D rooftop measurements recorded' },
-    { title: 'Quotation & BOM Approved', desc: 'System sized, quotation finalized & subsidy calculated' },
-    { title: 'DISCOM Feasibility Approval', desc: 'National portal paperwork filed & net meter sanction received' },
-    { title: 'Rooftop Installation', desc: 'Module mounting, inverter electrical wiring & safety earthing' },
-    { title: 'Commissioned & Subsidy DBT', desc: 'Net meter energized, grid synchronized & central subsidy released' },
+  const steps: Array<{ title: string; desc: string; status: EnquiryStatus }> = [
+    { title: 'Inquiry Registered', desc: 'Rooftop consultation booked & site engineer assigned', status: 'NEW' },
+    { title: 'Site Survey Completed', desc: 'Shadow analysis & 3D rooftop measurements recorded', status: 'SURVEY_DONE' },
+    { title: 'Quotation & BOM Approved', desc: 'System sized, quotation finalized & subsidy calculated', status: 'QUOTATION_SENT' },
+    { title: 'DISCOM Feasibility Approval', desc: 'National portal paperwork filed & net meter sanction received', status: 'CONVERTED' },
+    { title: 'Rooftop Installation', desc: 'Module mounting, inverter electrical wiring & safety earthing', status: 'CONVERTED' },
+    { title: 'Commissioned & Subsidy DBT', desc: 'Net meter energized, grid synchronized & central subsidy released', status: 'CONVERTED' },
   ];
 
-  // Send step notification via EmailJS
-  const handleSendMilestoneEmail = async (step: { title: string; desc: string }, idx: number) => {
+  // Determine stage progression (0 to 5) - respects explicit milestoneStep, linked records, and customer.status
+  const calculateCurrentStep = (): number => {
+    if (!customer) return 0;
+    // 1. Explicit milestoneStep
+    if (typeof customer.milestoneStep === 'number' && customer.milestoneStep >= 0 && customer.milestoneStep <= 5) {
+      return customer.milestoneStep;
+    }
+    // 2. Operational records
+    if (customerJob?.stage === 'COMMISSIONED') return 5;
+    if (customerJob) return 4;
+    if (customerOrder) return 3;
+    // 3. Customer CRM Status
+    if (customer.status === 'CONVERTED') return 3;
+    if (customerQuotation || customer.status === 'QUOTATION_SENT') return 2;
+    if (customerSurvey || customer.status === 'SURVEY_DONE') return 1;
+    return 0;
+  };
+
+  const currentStep = calculateCurrentStep();
+  const [isUpdatingMilestone, setIsUpdatingMilestone] = useState(false);
+
+  // Directly change and save active milestone
+  const handleUpdateMilestone = async (newStepIdx: number) => {
+    if (!customer) return;
+    const targetStep = steps[newStepIdx];
+    if (!targetStep) return;
+
+    try {
+      setIsUpdatingMilestone(true);
+      const updated = await customerService.updateCustomerMilestone(
+        customer.id,
+        newStepIdx,
+        targetStep.status
+      );
+
+      const freshCustomer: Customer = updated || {
+        ...customer,
+        milestoneStep: newStepIdx,
+        status: targetStep.status,
+      };
+
+      setCustomer(freshCustomer);
+      setCustomerSession(freshCustomer);
+
+      showToast(
+        'Project Stage Updated',
+        `Milestone set to Step ${newStepIdx + 1}: "${targetStep.title}". Status updated to ${targetStep.status}.`,
+        'success'
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to update milestone';
+      showToast('Update Failed', msg, 'error');
+    } finally {
+      setIsUpdatingMilestone(false);
+    }
+  };
+
+  // Send step notification via EmailJS and advance/sync milestone
+  const handleSendMilestoneEmail = async (step: { title: string; desc: string; status: EnquiryStatus }, idx: number) => {
     if (!customer) return;
     const targetEmail = customer.email || `${customer.phone.replace(/\D/g, '')}@customer.sunpower.in`;
 
     try {
       setSendingMilestoneIdx(idx);
+
+      // Automatically advance / synchronize milestone step
+      const updated = await customerService.updateCustomerMilestone(
+        customer.id,
+        idx,
+        step.status
+      );
+      const freshCustomer: Customer = updated || { ...customer, milestoneStep: idx, status: step.status };
+      setCustomer(freshCustomer);
+      setCustomerSession(freshCustomer);
+
       const res = await emailService.notifyTrackingStageUpdate({
         toEmail: targetEmail,
         customerName: customer.name,
@@ -134,14 +208,14 @@ export const CustomerPortalPage: React.FC = () => {
 
       if (res.isSimulatedFallback) {
         showToast(
-          'Email Queued (Simulated)',
-          `Milestone update for "${step.title}" queued for ${targetEmail}. (Configure VITE_EMAILJS_* in .env to send via live server)`,
+          'Stage Set & Email Queued',
+          `Milestone moved to Step ${idx + 1}: "${step.title}". Email queued for ${targetEmail}.`,
           'info'
         );
       } else {
         showToast(
-          'Milestone Email Sent',
-          `Step ${idx + 1} milestone notification successfully sent to ${targetEmail} via EmailJS.`,
+          'Milestone Updated & Email Sent',
+          `Project stage updated to Step ${idx + 1} and notification email sent to ${targetEmail} via EmailJS.`,
           'success'
         );
       }
@@ -463,19 +537,61 @@ export const CustomerPortalPage: React.FC = () => {
 
             {/* Stepper Progress Bar (Step-by-Step Email Notification Tracking) */}
             <Card className="bg-white border-slate-200 p-6 rounded-2xl shadow-sm">
-              <CardHeader className="p-0 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <CardHeader className="p-0 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
                 <div>
-                  <CardTitle className="text-base text-slate-900">Project Milestones & Verification</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-base text-slate-900">Project Milestones & Verification</CardTitle>
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                      Step {currentStep + 1} of {steps.length}
+                    </span>
+                  </div>
                   <p className="text-xs text-slate-500 mt-0.5">
                     Real-time execution status. Each milestone is notified through mail via EmailJS.
                   </p>
                 </div>
-                <Badge variant="amber" size="sm" className="self-start sm:self-auto font-mono">
-                  <Mail className="w-3 h-3 mr-1 text-amber-700" />
-                  Email Tracked
-                </Badge>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-1.5 text-xs bg-slate-50 hover:bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 transition-colors">
+                    <span className="text-slate-600 font-semibold">Change Stage:</span>
+                    <select
+                      value={currentStep}
+                      onChange={(e) => handleUpdateMilestone(Number(e.target.value))}
+                      disabled={isUpdatingMilestone}
+                      className="text-xs bg-transparent text-slate-900 font-bold cursor-pointer focus:outline-none"
+                    >
+                      {steps.map((st, i) => (
+                        <option key={st.title} value={i}>
+                          Step {i + 1}: {st.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <Badge variant="amber" size="sm" className="self-start sm:self-auto font-mono">
+                    <Mail className="w-3 h-3 mr-1 text-amber-700" />
+                    Email Tracked
+                  </Badge>
+                </div>
               </CardHeader>
               <CardContent className="p-0">
+                {/* Visual Progress Bar */}
+                <div className="mb-6 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                  <div className="flex justify-between items-center text-xs font-bold mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-slate-500">Current Phase:</span>
+                      <span className="text-slate-900">{steps[currentStep]?.title}</span>
+                    </div>
+                    <span className="text-emerald-700 font-mono">
+                      {Math.round(((currentStep + 1) / steps.length) * 100)}% Completed
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-amber-500 via-emerald-500 to-emerald-600 h-2.5 rounded-full transition-all duration-500 ease-out"
+                      style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+                    />
+                  </div>
+                </div>
+
                 <div className="relative pl-6 sm:pl-8 space-y-7 before:absolute before:left-3 sm:before:left-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
                   {steps.map((step, idx) => {
                     const isDone = idx <= currentStep;
@@ -484,30 +600,50 @@ export const CustomerPortalPage: React.FC = () => {
 
                     return (
                       <div key={step.title} className="relative flex items-start gap-4">
-                        {/* Dot indicator */}
-                        <div
-                          className={`absolute -left-6 sm:-left-8 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ring-4 ring-white shadow-xs ${
+                        {/* Dot indicator - Clickable to update step */}
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateMilestone(idx)}
+                          title={`Click to set stage to Step ${idx + 1}: ${step.title}`}
+                          className={`absolute -left-6 sm:-left-8 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ring-4 ring-white shadow-xs transition-transform hover:scale-110 cursor-pointer ${
                             isDone
                               ? 'bg-emerald-600 text-white'
-                              : 'bg-slate-200 text-slate-600'
+                              : 'bg-slate-200 text-slate-600 hover:bg-amber-100 hover:text-amber-800'
                           }`}
                         >
                           {isDone ? <CheckCircle2 className="w-4 h-4" /> : idx + 1}
-                        </div>
+                        </button>
 
                         <div className="flex-1">
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <p className={`text-xs font-bold ${isDone ? 'text-slate-900' : 'text-slate-400'}`}>
+                            <p
+                              onClick={() => handleUpdateMilestone(idx)}
+                              className={`text-xs font-bold cursor-pointer hover:underline ${
+                                isDone ? 'text-slate-900' : 'text-slate-500'
+                              }`}
+                            >
                               {step.title}
                             </p>
 
-                            {/* "Notified through mail" badge */}
-                            {isDone && (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs">
-                                <Mail className="w-3 h-3 text-emerald-600" />
-                                Notified through mail
-                              </span>
-                            )}
+                            <div className="flex items-center gap-1.5">
+                              {/* "Notified through mail" badge */}
+                              {isDone && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs">
+                                  <Mail className="w-3 h-3 text-emerald-600" />
+                                  Notified through mail
+                                </span>
+                              )}
+
+                              {!isCurrent && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateMilestone(idx)}
+                                  className="text-[10px] font-semibold text-slate-500 hover:text-amber-800 bg-slate-100 hover:bg-amber-50 border border-slate-200 px-2 py-0.5 rounded-md transition-colors cursor-pointer"
+                                >
+                                  Set Active
+                                </button>
+                              )}
+                            </div>
                           </div>
 
                           <p className="text-[11px] text-slate-500 mt-0.5">{step.desc}</p>
@@ -531,7 +667,7 @@ export const CustomerPortalPage: React.FC = () => {
                                 ? 'Dispatching Email...'
                                 : isDone
                                 ? 'Resend Step Email (EmailJS)'
-                                : 'Notify Customer of this Step (EmailJS)'}
+                                : 'Advance Stage & Send Email (EmailJS)'}
                             </button>
                           </div>
                         </div>
