@@ -1,6 +1,7 @@
 import { DashboardData, DashboardKPIs, PendingTask, RecentActivity, MonthlyTrendData } from '../../../types/dashboard';
 import { ApiResponse } from '../../../types/common';
 import { wrapResponse } from '../../../services/apiResponse';
+import { apiClient, USE_MOCK_DATA } from '../../../api/apiClient';
 import {
   customers,
   quotations,
@@ -14,6 +15,14 @@ import {
 
 export const dashboardService = {
   async getDashboardData(): Promise<ApiResponse<DashboardData>> {
+    if (!USE_MOCK_DATA) {
+      try {
+        await apiClient.get('/dashboard/metrics');
+      } catch (err) {
+        console.warn('[dashboardService] Metrics API failed, using client calculation:', err);
+      }
+    }
+
     // 1. Calculate live KPIs directly from database collections
     const pendingQuotes = quotations.filter((q) => q.status === 'DRAFT' || q.status === 'SENT');
     const pendingQuotesTotal = pendingQuotes.reduce((acc, q) => acc + q.totalAmount, 0);

@@ -9,6 +9,7 @@ import {
   customers,
 } from '../../../store/inMemoryDb';
 import { wrapResponse } from '../../../services/apiResponse';
+import { apiClient, USE_MOCK_DATA } from '../../../api/apiClient';
 
 export interface ResolveTicketInput {
   partsUsed?: { name: string; cost: number }[];
@@ -21,6 +22,14 @@ export const serviceService = {
    * Retrieves all service and maintenance tickets
    */
   async getServiceTickets(): Promise<ApiResponse<ServiceTicket[]>> {
+    if (!USE_MOCK_DATA) {
+      try {
+        const response = await apiClient.get<{ success: boolean; data: ServiceTicket[] }>('/service-tickets');
+        return wrapResponse<ServiceTicket[]>(response.data.data);
+      } catch (err) {
+        console.warn('[serviceService] API failed, falling back to local store:', err);
+      }
+    }
     return wrapResponse<ServiceTicket[]>([...serviceTickets]);
   },
 
@@ -28,6 +37,15 @@ export const serviceService = {
    * Creates a new service ticket with automated warranty coverage verification
    */
   async createTicket(data: ServiceTicketFormData): Promise<ApiResponse<ServiceTicket>> {
+    if (!USE_MOCK_DATA) {
+      try {
+        const response = await apiClient.post<{ success: boolean; data: ServiceTicket }>('/service-tickets', data);
+        return wrapResponse<ServiceTicket>(response.data.data, 'Ticket created successfully');
+      } catch (err) {
+        console.warn('[serviceService] Create ticket API failed, falling back to local store:', err);
+      }
+    }
+
     const customer = customers.find((c) => c.id === data.customerId);
     const count = serviceTickets.length + 1;
     const ticketNumber = `TKT-2026-${String(count).padStart(3, '0')}`;
@@ -80,6 +98,14 @@ export const serviceService = {
     id: string,
     status: TicketStatus
   ): Promise<ApiResponse<ServiceTicket>> {
+    if (!USE_MOCK_DATA) {
+      try {
+        await apiClient.patch(`/service-tickets/${id}/status`, { status });
+      } catch (err) {
+        console.warn('[serviceService] Status update API failed, continuing with local store:', err);
+      }
+    }
+
     const updated = updateServiceTicket(id, {
       status,
       updatedAt: new Date().toISOString(),
@@ -95,6 +121,17 @@ export const serviceService = {
     id: string,
     data: ResolveTicketInput
   ): Promise<ApiResponse<ServiceTicket>> {
+    if (!USE_MOCK_DATA) {
+      try {
+        await apiClient.patch(`/service-tickets/${id}/status`, {
+          status: 'RESOLVED',
+          resolutionNotes: data.resolutionNotes,
+        });
+      } catch (err) {
+        console.warn('[serviceService] Resolve ticket API failed, continuing with local store:', err);
+      }
+    }
+
     const existing = serviceTickets.find((t) => t.id === id);
     if (!existing) {
       throw new Error(`Service ticket with id ${id} not found`);
