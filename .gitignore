@@ -31,3 +31,10 @@ vite.config.d.ts
 .env.production
 .env.local
 .env.*.local
+
+# SQLite local databases
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+server/data/
