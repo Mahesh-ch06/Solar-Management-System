@@ -239,13 +239,13 @@ export function updateCustomer(id: string, data: Partial<Customer>): Customer {
     let syncedStatus = data.status || existing.status;
 
     if (data.status && data.milestoneStep === undefined) {
-      if (data.status === 'SURVEY_DONE') syncedMilestoneStep = 1;
+      if (data.status === 'SURVEY_DONE' || data.status === 'SURVEY_SCHEDULED') syncedMilestoneStep = 1;
       else if (data.status === 'QUOTATION_SENT') syncedMilestoneStep = 2;
       else if (data.status === 'CONVERTED') syncedMilestoneStep = Math.max(syncedMilestoneStep || 0, 3);
       else if (['NEW', 'CONTACTED', 'QUEUED'].includes(data.status)) syncedMilestoneStep = 0;
     } else if (data.milestoneStep !== undefined && !data.status) {
       if (data.milestoneStep === 0) syncedStatus = 'NEW';
-      else if (data.milestoneStep === 1) syncedStatus = 'SURVEY_DONE';
+      else if (data.milestoneStep === 1) syncedStatus = 'SURVEY_SCHEDULED';
       else if (data.milestoneStep === 2) syncedStatus = 'QUOTATION_SENT';
       else if (data.milestoneStep >= 3) syncedStatus = 'CONVERTED';
     }

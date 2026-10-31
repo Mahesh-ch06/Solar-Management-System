@@ -14,11 +14,13 @@ import {
   Edit2,
   Trash2,
   Sparkles,
+  Mail,
 } from 'lucide-react';
 import { Customer, EnquiryStatus } from '../../types/customer';
 import { customerService } from './services/customerService';
 import { CustomerFormDrawer } from './components/CustomerFormDrawer';
 import { useToast } from '../../context/ToastContext';
+import { emailService } from '../../services/emailService';
 import { formatCurrency, formatCapacity } from '../../utils/formatters';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
@@ -81,6 +83,60 @@ const ASSIGNED_STAFF_OPTIONS = [
   'Nikhil',
 ];
 
+const STATUS_MILESTONE_INFO: Record<
+  EnquiryStatus,
+  { stepIndex: number; title: string; desc: string; next?: string }
+> = {
+  NEW: {
+    stepIndex: 1,
+    title: 'Inquiry Registered',
+    desc: 'Rooftop consultation booked & site engineer assigned.',
+    next: 'Site Survey & 3D Shadow Analysis',
+  },
+  CONTACTED: {
+    stepIndex: 1,
+    title: 'Inquiry Registered & Contacted',
+    desc: 'Preliminary requirements discussed and rooftop site survey scheduled.',
+    next: 'Site Survey & 3D Shadow Analysis',
+  },
+  SURVEY_SCHEDULED: {
+    stepIndex: 2,
+    title: 'Site Survey Scheduled',
+    desc: 'Field engineering visit booked for 3D rooftop measurements and solar shadow analysis.',
+    next: 'Site Survey Completion & Technical Feasibility',
+  },
+  SURVEY_DONE: {
+    stepIndex: 2,
+    title: 'Site Survey Completed',
+    desc: '3D shadow analysis and rooftop structural load measurements successfully completed.',
+    next: 'Quotation & BOM Preparation',
+  },
+  QUOTATION_SENT: {
+    stepIndex: 3,
+    title: 'Quotation & BOM Approved',
+    desc: 'Solar PV system sizing finalized, engineering BOM generated, and central PM Surya Ghar subsidy calculated.',
+    next: 'DISCOM Feasibility Approval & Net Metering',
+  },
+  CONVERTED: {
+    stepIndex: 4,
+    title: 'DISCOM Feasibility Approval',
+    desc: 'National rooftop solar portal paperwork filed and DISCOM net-metering feasibility sanction received.',
+    next: 'Rooftop Equipment Installation',
+  },
+  CLOSED_LOST: {
+    stepIndex: 1,
+    title: 'Inquiry Closed',
+    desc: 'Inquiry closed. Reach out to our solar consultants anytime to re-evaluate your rooftop.',
+    next: undefined,
+  },
+  QUEUED: {
+    stepIndex: 1,
+    title: 'Inquiry Queued',
+    desc: 'Inquiry queued for assigned solar engineer.',
+    next: 'Site Survey Scheduled',
+  },
+};
+
 const ITEMS_PER_PAGE = 10;
 
 export const CustomersPage: React.FC = () => {
@@ -102,15 +158,47 @@ export const CustomersPage: React.FC = () => {
     queryFn: () => customerService.getCustomers(),
   });
 
-  // Mutation for inline quick status change
+  // Mutation for inline quick status change with automated EmailJS milestone dispatch
   const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: EnquiryStatus }) =>
-      customerService.updateCustomerStatus(id, status),
+    mutationFn: async ({ id, status }: { id: string; status: EnquiryStatus }) => {
+      const cust = customers.find((c) => c.id === id);
+      const updated = await customerService.updateCustomerStatus(id, status);
+
+      // Automated EmailJS notification to customer
+      if (cust) {
+        const targetEmail =
+          cust.email?.trim() ||
+          (cust.phone === '7013295712' ? 'maheshch1094@gmail.com' : `${cust.phone.replace(/\D/g, '')}@customer.sunpower.in`);
+
+        const milestoneInfo = STATUS_MILESTONE_INFO[status] || STATUS_MILESTONE_INFO.NEW;
+
+        try {
+          await emailService.notifyTrackingStageUpdate({
+            toEmail: targetEmail,
+            customerName: cust.name,
+            stepTitle: milestoneInfo.title,
+            stepIndex: milestoneInfo.stepIndex,
+            totalSteps: 6,
+            description: milestoneInfo.desc,
+            referenceId: cust.id,
+            nextMilestone: milestoneInfo.next,
+          });
+        } catch (emailErr) {
+          console.warn('[CustomersPage] Automatic milestone email failed:', emailErr);
+        }
+      }
+
+      return updated;
+    },
     onSuccess: (updated) => {
       if (updated) {
+        const targetEmail =
+          updated.email?.trim() ||
+          (updated.phone === '7013295712' ? 'maheshch1094@gmail.com' : `${updated.phone.replace(/\D/g, '')}@customer.sunpower.in`);
+
         showToast(
-          'Status Updated',
-          `${updated.name}'s status changed to ${STATUS_DISPLAY_LABELS[updated.status]}`,
+          'Status & Milestone Dispatched',
+          `${updated.name}'s status changed to ${STATUS_DISPLAY_LABELS[updated.status]}. Step tracking notification sent to ${targetEmail} via EmailJS.`,
           'success'
         );
       } else {
@@ -121,6 +209,43 @@ export const CustomersPage: React.FC = () => {
     onError: (err: unknown) => {
       const msg = err instanceof Error ? err.message : 'Failed to update status';
       showToast('Error Updating Status', msg, 'error');
+    },
+  });
+
+  // Manual milestone notification email trigger by worker
+  const sendMilestoneEmailMutation = useMutation({
+    mutationFn: async (cust: Customer) => {
+      const targetEmail =
+        cust.email?.trim() ||
+        (cust.phone === '7013295712' ? 'maheshch1094@gmail.com' : `${cust.phone.replace(/\D/g, '')}@customer.sunpower.in`);
+
+      const milestoneInfo = STATUS_MILESTONE_INFO[cust.status] || STATUS_MILESTONE_INFO.NEW;
+
+      return emailService.notifyTrackingStageUpdate({
+        toEmail: targetEmail,
+        customerName: cust.name,
+        stepTitle: milestoneInfo.title,
+        stepIndex: milestoneInfo.stepIndex,
+        totalSteps: 6,
+        description: milestoneInfo.desc,
+        referenceId: cust.id,
+        nextMilestone: milestoneInfo.next,
+      });
+    },
+    onSuccess: (_, cust) => {
+      const targetEmail =
+        cust.email?.trim() ||
+        (cust.phone === '7013295712' ? 'maheshch1094@gmail.com' : `${cust.phone.replace(/\D/g, '')}@customer.sunpower.in`);
+
+      showToast(
+        'Milestone Email Sent',
+        `Step tracking notification for "${STATUS_DISPLAY_LABELS[cust.status]}" sent to ${targetEmail} via EmailJS.`,
+        'success'
+      );
+    },
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : 'Failed to dispatch email';
+      showToast('Email Error', msg, 'error');
     },
   });
 
@@ -530,7 +655,7 @@ export const CustomersPage: React.FC = () => {
                   <TableHead className="w-[130px]">Monthly Bill</TableHead>
                   <TableHead className="w-[160px]">Status</TableHead>
                   <TableHead className="w-[170px]">Assigned To</TableHead>
-                  <TableHead className="text-right w-[190px]">Actions</TableHead>
+                  <TableHead className="text-right w-[210px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -640,7 +765,7 @@ export const CustomersPage: React.FC = () => {
                                    status: e.target.value as EnquiryStatus,
                                 })
                               }
-                              title="Change stage quickly"
+                              title="Change stage quickly and notify customer via EmailJS"
                               className="text-xs bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-md py-1.5 pl-2 pr-6 appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-solar-500"
                             >
                               <option value="NEW">New</option>
@@ -655,6 +780,18 @@ export const CustomersPage: React.FC = () => {
                               ▼
                             </span>
                           </div>
+
+                          {/* Send Milestone Email button */}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => sendMilestoneEmailMutation.mutate(cust)}
+                            disabled={sendMilestoneEmailMutation.isPending}
+                            title={`Dispatch milestone tracking email for "${STATUS_DISPLAY_LABELS[cust.status]}" via EmailJS`}
+                            className="p-1.5 text-amber-600 hover:text-amber-800 hover:bg-amber-50"
+                          >
+                            <Mail className="w-3.5 h-3.5" />
+                          </Button>
 
                           {/* Edit button */}
                           <Button

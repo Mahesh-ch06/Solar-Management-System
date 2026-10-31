@@ -5,7 +5,7 @@ import emailjs from '@emailjs/browser';
  */
 const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_yhbkafs';
 const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'template_q772yg3';
-const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || '';
+const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || '8WPyhdAMux9m4jd4H';
 
 // In-memory rate limiting tracker (prevents duplicate triggers within 15 seconds)
 const sentTimestamps: Record<string, number> = {};

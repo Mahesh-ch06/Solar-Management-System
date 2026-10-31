@@ -33,6 +33,7 @@ import {
   User,
   Mail,
   Send,
+  Lock,
 } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { emailService } from '../../services/emailService';
@@ -134,18 +135,28 @@ export const CustomerPortalPage: React.FC = () => {
     // 3. Customer CRM Status
     if (customer.status === 'CONVERTED') return 3;
     if (customerQuotation || customer.status === 'QUOTATION_SENT') return 2;
-    if (customerSurvey || customer.status === 'SURVEY_DONE') return 1;
+    if (customerSurvey || customer.status === 'SURVEY_DONE' || customer.status === 'SURVEY_SCHEDULED') return 1;
     return 0;
   };
 
   const currentStep = calculateCurrentStep();
   const [isUpdatingMilestone, setIsUpdatingMilestone] = useState(false);
 
-  // Directly change and save active milestone
+  // Directly change and save active milestone (with strict sequential enforcement)
   const handleUpdateMilestone = async (newStepIdx: number) => {
     if (!customer) return;
     const targetStep = steps[newStepIdx];
     if (!targetStep) return;
+
+    // Strict sequential enforcement: Cannot skip past the immediate next step!
+    if (newStepIdx > currentStep + 1) {
+      showToast(
+        'Sequential Step Required',
+        `Milestones must be followed step by step. Complete Step ${currentStep + 1} before advancing to Step ${newStepIdx + 1}.`,
+        'warning'
+      );
+      return;
+    }
 
     try {
       setIsUpdatingMilestone(true);
@@ -177,10 +188,23 @@ export const CustomerPortalPage: React.FC = () => {
     }
   };
 
-  // Send step notification via EmailJS and advance/sync milestone
+  // Send step notification via EmailJS and advance/sync milestone (sequential only)
   const handleSendMilestoneEmail = async (step: { title: string; desc: string; status: EnquiryStatus }, idx: number) => {
     if (!customer) return;
-    const targetEmail = customer.email || `${customer.phone.replace(/\D/g, '')}@customer.sunpower.in`;
+
+    // Strict sequential check: Cannot send email for locked future steps
+    if (idx > currentStep + 1) {
+      showToast(
+        'Sequence Enforced',
+        `Cannot send Step ${idx + 1} email yet. Projects must progress step-by-step. Complete Step ${currentStep + 1} first.`,
+        'warning'
+      );
+      return;
+    }
+
+    const targetEmail =
+      customer.email?.trim() ||
+      (customer.phone === '7013295712' ? 'maheshch1094@gmail.com' : `${customer.phone.replace(/\D/g, '')}@customer.sunpower.in`);
 
     try {
       setSendingMilestoneIdx(idx);
@@ -559,11 +583,14 @@ export const CustomerPortalPage: React.FC = () => {
                       disabled={isUpdatingMilestone}
                       className="text-xs bg-transparent text-slate-900 font-bold cursor-pointer focus:outline-none"
                     >
-                      {steps.map((st, i) => (
-                        <option key={st.title} value={i}>
-                          Step {i + 1}: {st.title}
-                        </option>
-                      ))}
+                      {steps.map((st, i) => {
+                        const isSelectable = i <= currentStep + 1;
+                        return (
+                          <option key={st.title} value={i} disabled={!isSelectable}>
+                            Step {i + 1}: {st.title} {!isSelectable ? '🔒 (Locked)' : i === currentStep ? '• Current Active' : ''}
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
                   <Badge variant="amber" size="sm" className="self-start sm:self-auto font-mono">
@@ -594,36 +621,55 @@ export const CustomerPortalPage: React.FC = () => {
 
                 <div className="relative pl-6 sm:pl-8 space-y-7 before:absolute before:left-3 sm:before:left-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
                   {steps.map((step, idx) => {
-                    const isDone = idx <= currentStep;
+                    const isDone = idx < currentStep;
                     const isCurrent = idx === currentStep;
+                    const isNext = idx === currentStep + 1;
+                    const isLocked = idx > currentStep + 1;
                     const isSendingThis = sendingMilestoneIdx === idx;
 
                     return (
                       <div key={step.title} className="relative flex items-start gap-4">
-                        {/* Dot indicator - Clickable to update step */}
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateMilestone(idx)}
-                          title={`Click to set stage to Step ${idx + 1}: ${step.title}`}
-                          className={`absolute -left-6 sm:-left-8 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ring-4 ring-white shadow-xs transition-transform hover:scale-110 cursor-pointer ${
-                            isDone
-                              ? 'bg-emerald-600 text-white'
-                              : 'bg-slate-200 text-slate-600 hover:bg-amber-100 hover:text-amber-800'
-                          }`}
-                        >
-                          {isDone ? <CheckCircle2 className="w-4 h-4" /> : idx + 1}
-                        </button>
+                        {/* Dot indicator */}
+                        {isLocked ? (
+                          <div
+                            title={`Step ${idx + 1} is locked. Complete Step ${currentStep + 1} first.`}
+                            className="absolute -left-6 sm:-left-8 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ring-4 ring-white shadow-xs bg-slate-100 text-slate-400 cursor-not-allowed select-none"
+                          >
+                            <Lock className="w-3 h-3 text-slate-400" />
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateMilestone(idx)}
+                            title={`Click to set stage to Step ${idx + 1}: ${step.title}`}
+                            className={`absolute -left-6 sm:-left-8 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ring-4 ring-white shadow-xs transition-transform hover:scale-110 cursor-pointer ${
+                              isDone
+                                ? 'bg-emerald-600 text-white'
+                                : isCurrent
+                                ? 'bg-amber-500 text-white ring-amber-300'
+                                : 'bg-slate-200 text-slate-700 hover:bg-amber-100 hover:text-amber-800'
+                            }`}
+                          >
+                            {isDone ? <CheckCircle2 className="w-4 h-4" /> : idx + 1}
+                          </button>
+                        )}
 
                         <div className="flex-1">
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <p
-                              onClick={() => handleUpdateMilestone(idx)}
-                              className={`text-xs font-bold cursor-pointer hover:underline ${
-                                isDone ? 'text-slate-900' : 'text-slate-500'
-                              }`}
-                            >
-                              {step.title}
-                            </p>
+                            {isLocked ? (
+                              <p className="text-xs font-bold text-slate-400 select-none cursor-not-allowed flex items-center gap-1.5">
+                                <span>{step.title}</span>
+                              </p>
+                            ) : (
+                              <p
+                                onClick={() => handleUpdateMilestone(idx)}
+                                className={`text-xs font-bold cursor-pointer hover:underline ${
+                                  isDone || isCurrent ? 'text-slate-900' : 'text-slate-700'
+                                }`}
+                              >
+                                {step.title}
+                              </p>
+                            )}
 
                             <div className="flex items-center gap-1.5">
                               {/* "Notified through mail" badge */}
@@ -634,41 +680,57 @@ export const CustomerPortalPage: React.FC = () => {
                                 </span>
                               )}
 
-                              {!isCurrent && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleUpdateMilestone(idx)}
-                                  className="text-[10px] font-semibold text-slate-500 hover:text-amber-800 bg-slate-100 hover:bg-amber-50 border border-slate-200 px-2 py-0.5 rounded-md transition-colors cursor-pointer"
-                                >
-                                  Set Active
-                                </button>
+                              {isCurrent && (
+                                <span className="inline-block text-[10px] font-bold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
+                                  Current Active Stage
+                                </span>
+                              )}
+
+                              {isNext && (
+                                <span className="inline-block text-[10px] font-semibold text-sky-800 bg-sky-50 px-2.5 py-0.5 rounded-full border border-sky-200">
+                                  Next Milestone
+                                </span>
+                              )}
+
+                              {isLocked && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-400 border border-slate-200">
+                                  <Lock className="w-2.5 h-2.5" />
+                                  Locked
+                                </span>
                               )}
                             </div>
                           </div>
 
                           <p className="text-[11px] text-slate-500 mt-0.5">{step.desc}</p>
 
-                          {/* Milestone status and quick resend button */}
+                          {/* Milestone action button */}
                           <div className="flex flex-wrap items-center gap-2 mt-2">
-                            {isCurrent && (
-                              <span className="inline-block text-[10px] font-bold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
-                                Current Active Stage
+                            {isDone || isCurrent ? (
+                              <button
+                                type="button"
+                                disabled={isSendingThis}
+                                onClick={() => handleSendMilestoneEmail(step, idx)}
+                                className="text-[11px] text-amber-700 hover:text-amber-800 font-bold inline-flex items-center gap-1 cursor-pointer hover:underline disabled:opacity-50"
+                              >
+                                <Send className="w-2.5 h-2.5" />
+                                {isSendingThis ? 'Dispatching Email...' : 'Resend Step Email (EmailJS)'}
+                              </button>
+                            ) : isNext ? (
+                              <button
+                                type="button"
+                                disabled={isSendingThis}
+                                onClick={() => handleSendMilestoneEmail(step, idx)}
+                                className="text-[11px] text-emerald-700 hover:text-emerald-800 font-bold inline-flex items-center gap-1 cursor-pointer hover:underline disabled:opacity-50"
+                              >
+                                <Send className="w-2.5 h-2.5" />
+                                {isSendingThis ? 'Advancing Stage & Dispatching Email...' : `Advance to Step ${idx + 1} & Send Email (EmailJS)`}
+                              </button>
+                            ) : (
+                              <span className="text-[11px] text-slate-400 font-medium inline-flex items-center gap-1 select-none cursor-not-allowed">
+                                <Lock className="w-2.5 h-2.5 text-slate-300" />
+                                Locked (Complete Step {idx} first)
                               </span>
                             )}
-
-                            <button
-                              type="button"
-                              disabled={isSendingThis}
-                              onClick={() => handleSendMilestoneEmail(step, idx)}
-                              className="text-[11px] text-amber-700 hover:text-amber-800 font-bold inline-flex items-center gap-1 cursor-pointer hover:underline disabled:opacity-50"
-                            >
-                              <Send className="w-2.5 h-2.5" />
-                              {isSendingThis
-                                ? 'Dispatching Email...'
-                                : isDone
-                                ? 'Resend Step Email (EmailJS)'
-                                : 'Advance Stage & Send Email (EmailJS)'}
-                            </button>
                           </div>
                         </div>
                       </div>
