@@ -1,4 +1,5 @@
 export type EnquiryStatus =
+  | 'QUEUED'
   | 'NEW'
   | 'CONTACTED'
   | 'SURVEY_SCHEDULED'

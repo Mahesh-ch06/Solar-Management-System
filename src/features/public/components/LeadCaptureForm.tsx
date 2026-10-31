@@ -4,11 +4,12 @@ import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { Select } from '../../../components/ui/Select';
 import { useToast } from '../../../context/ToastContext';
-import { addCustomer } from '../../../store/inMemoryDb';
+import { customerService } from '../../customers/services/customerService';
 import { Customer } from '../../../types/customer';
 import {
   Send,
   CheckCircle2,
+  Clock,
   PhoneCall,
   Calendar,
   ShieldCheck,
@@ -35,7 +36,7 @@ export const LeadCaptureForm: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedLead, setSubmittedLead] = useState<Customer | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!name.trim() || !phone.trim() || !city.trim()) {
@@ -51,9 +52,7 @@ export const LeadCaptureForm: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      const now = new Date().toISOString();
-      const newCustomer: Customer = {
-        id: `cust-${Date.now()}`,
+      const created = await customerService.addCustomer({
         name: name.trim(),
         phone: phone.trim(),
         email: email.trim() || `${phone.trim()}@sunpower.customer`,
@@ -65,16 +64,24 @@ export const LeadCaptureForm: React.FC = () => {
         systemType,
         subsidyRequired,
         enquirySource: 'WEB_FORM',
-        status: 'NEW',
-        assignedTo: 'Vikram Mehta',
         notes: notes.trim() || 'Website inquiry for PM Surya Ghar rooftop solar installation.',
-        createdAt: now,
-        updatedAt: now,
-      };
+      });
 
-      addCustomer(newCustomer);
-      setSubmittedLead(newCustomer);
-      showToast('Inquiry Received', 'Your solar rooftop inquiry has been logged successfully.', 'success');
+      setSubmittedLead(created);
+
+      if (created.status === 'QUEUED') {
+        showToast(
+          'Enquiry Queued',
+          'All consultants are currently busy. Your inquiry is in priority queue and will be assigned shortly.',
+          'warning'
+        );
+      } else {
+        showToast(
+          'Inquiry Received',
+          `Your rooftop solar inquiry has been received and assigned to consultant ${created.assignedTo}.`,
+          'success'
+        );
+      }
     } catch {
       showToast('Error', 'Unable to submit your inquiry. Please try again.', 'error');
     } finally {
@@ -96,19 +103,40 @@ export const LeadCaptureForm: React.FC = () => {
     <Card className="bg-white border-slate-200 text-slate-900 p-6 sm:p-10 rounded-3xl shadow-xl">
       {submittedLead ? (
         <div className="text-center py-6 space-y-4">
-          <div className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto shadow-xs">
-            <CheckCircle2 className="w-10 h-10" />
-          </div>
+          {submittedLead.status === 'QUEUED' ? (
+            <div className="w-16 h-16 rounded-full bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto shadow-xs">
+              <Clock className="w-10 h-10 animate-pulse" />
+            </div>
+          ) : (
+            <div className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto shadow-xs">
+              <CheckCircle2 className="w-10 h-10" />
+            </div>
+          )}
 
-          <h3 className="text-xl font-bold text-slate-900">Rooftop Survey Request Confirmed!</h3>
+          <h3 className="text-xl font-bold text-slate-900">
+            {submittedLead.status === 'QUEUED'
+              ? 'Enquiry Placed in Priority Queue'
+              : 'Rooftop Survey Request Confirmed!'}
+          </h3>
           <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
-            Thank you, <strong className="text-slate-900">{submittedLead.name}</strong>. Your solar application has been recorded in our central system.
+            Thank you, <strong className="text-slate-900">{submittedLead.name}</strong>.{' '}
+            {submittedLead.status === 'QUEUED'
+              ? 'All our solar consultants are currently engaged in active consultations. Your enquiry has been placed in our priority queue and will be assigned to the next available specialist automatically.'
+              : 'Your solar application has been recorded in our central system and assigned to our solar specialist.'}
           </p>
 
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 max-w-sm mx-auto text-left space-y-2 text-xs">
             <div className="flex justify-between text-slate-600">
               <span>Application Reference:</span>
               <span className="font-mono font-bold text-amber-600">{submittedLead.id}</span>
+            </div>
+            <div className="flex justify-between text-slate-600">
+              <span>Assigned Specialist:</span>
+              <span className={submittedLead.status === 'QUEUED' ? 'font-semibold text-amber-600' : 'font-semibold text-emerald-700'}>
+                {submittedLead.assignedTo && submittedLead.assignedTo !== 'UNASSIGNED'
+                  ? `${submittedLead.assignedTo} (Dedicated Consultant)`
+                  : 'Pending Assignment (In Priority Queue)'}
+              </span>
             </div>
             <div className="flex justify-between text-slate-600">
               <span>System Requested:</span>
@@ -125,9 +153,15 @@ export const LeadCaptureForm: React.FC = () => {
               <PhoneCall className="w-4 h-4 text-amber-700" />
               What Happens Next:
             </p>
-            <p className="text-[11px] text-slate-600 leading-relaxed">
-              1. Our rooftop design engineer will contact you at <strong className="text-slate-800">{submittedLead.phone}</strong> to confirm your address and schedule the 3D shadow analysis.
-            </p>
+            {submittedLead.status === 'QUEUED' ? (
+              <p className="text-[11px] text-amber-900/90 leading-relaxed">
+                As soon as a solar specialist is released from an ongoing consultation, your file will be allocated to them immediately. You will receive a direct phone call at <strong className="text-slate-900">{submittedLead.phone}</strong>.
+              </p>
+            ) : (
+              <p className="text-[11px] text-slate-600 leading-relaxed">
+                1. Dedicated solar consultant <strong className="text-slate-800">{submittedLead.assignedTo}</strong> will contact you at <strong className="text-slate-800">{submittedLead.phone}</strong> to confirm your address and schedule the 3D shadow analysis.
+              </p>
+            )}
             <p className="text-[11px] text-slate-600 leading-relaxed">
               2. We will generate your customized Bill of Materials (BOM) and file your pre-registration on the National Portal for the PM Surya Ghar subsidy.
             </p>

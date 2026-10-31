@@ -36,6 +36,7 @@ const STATUS_BADGE_VARIANTS: Record<
   EnquiryStatus,
   'sky' | 'purple' | 'amber' | 'emerald' | 'rose'
 > = {
+  QUEUED: 'amber',
   NEW: 'sky',
   CONTACTED: 'purple',
   SURVEY_SCHEDULED: 'amber',
@@ -46,6 +47,7 @@ const STATUS_BADGE_VARIANTS: Record<
 };
 
 const STATUS_DISPLAY_LABELS: Record<EnquiryStatus, string> = {
+  QUEUED: 'Queued (Awaiting Staff)',
   NEW: 'New',
   CONTACTED: 'Contacted',
   SURVEY_SCHEDULED: 'Survey Scheduled',
@@ -57,6 +59,7 @@ const STATUS_DISPLAY_LABELS: Record<EnquiryStatus, string> = {
 
 const FILTER_PILLS: Array<{ id: 'ALL' | EnquiryStatus; label: string }> = [
   { id: 'ALL', label: 'All' },
+  { id: 'QUEUED', label: 'Queued' },
   { id: 'NEW', label: 'New' },
   { id: 'CONTACTED', label: 'Contacted' },
   { id: 'SURVEY_SCHEDULED', label: 'Survey Scheduled' },
@@ -157,6 +160,7 @@ export const CustomersPage: React.FC = () => {
   const stats = useMemo(() => {
     return {
       total: customers.length,
+      queued: customers.filter((c) => c.status === 'QUEUED').length,
       new: customers.filter((c) => c.status === 'NEW').length,
       contacted: customers.filter((c) => c.status === 'CONTACTED').length,
       surveyScheduled: customers.filter((c) => c.status === 'SURVEY_SCHEDULED').length,
@@ -296,6 +300,25 @@ export const CustomersPage: React.FC = () => {
           <div className="text-[11px] text-slate-400 mt-0.5">Advance paid</div>
         </div>
       </div>
+
+      {/* Priority Queue Notification Banner */}
+      {stats.queued > 0 && (
+        <div className="flex items-center justify-between p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs shadow-xs">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-amber-600 shrink-0 animate-pulse" />
+            <span>
+              <strong>{stats.queued} Enquiry{stats.queued > 1 ? 's' : ''} in Priority Queue:</strong> All sales consultants are currently busy.
+              Queued enquiries will be automatically assigned to consultants upon release.
+            </span>
+          </div>
+          <button
+            onClick={() => handleStatusFilterChange('QUEUED')}
+            className="text-xs font-semibold text-amber-800 underline hover:text-amber-950 shrink-0 ml-3 cursor-pointer"
+          >
+            View Queued ({stats.queued})
+          </button>
+        </div>
+      )}
 
       {/* Filter and Search Bar Section */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-3.5 shadow-xs">

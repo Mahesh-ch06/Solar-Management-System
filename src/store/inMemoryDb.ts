@@ -2,7 +2,7 @@
 // Central in-memory state store with localStorage persistence
 // Prepared for seamless API synchronization when backend server is running
 
-import { Customer } from '../types/customer';
+import { Customer, EnquiryStatus } from '../types/customer';
 import { Survey } from '../types/survey';
 import { Quotation, Order } from '../types/quotation';
 import { InventoryItem, StockMovement } from '../types/inventory';
@@ -111,6 +111,32 @@ export const INITIAL_USERS: UserAccount[] = [
     roleAssignedAt: '2026-08-15T10:00:00Z',
   },
   {
+    id: 'usr-sales-02',
+    name: 'Priya Kapoor',
+    email: 'priya.k@sunpowersolutions.in',
+    password: 'Password@123',
+    role: 'SALES',
+    status: 'ACTIVE',
+    phone: '+91 98111 00008',
+    department: 'Key Accounts',
+    roleAssignedBy: 'Rajesh Sharma (Admin)',
+    roleAssignedAt: '2026-08-16T10:00:00Z',
+    createdAt: '2026-08-16T10:00:00Z',
+  },
+  {
+    id: 'usr-sales-03',
+    name: 'Rohit Gupta',
+    email: 'rohit.g@sunpowersolutions.in',
+    password: 'Password@123',
+    role: 'SALES',
+    status: 'ACTIVE',
+    phone: '+91 98111 00009',
+    department: 'Field Sales Lead',
+    roleAssignedBy: 'Rajesh Sharma (Admin)',
+    roleAssignedAt: '2026-08-17T10:00:00Z',
+    createdAt: '2026-08-17T10:00:00Z',
+  },
+  {
     id: 'usr-tech-01',
     name: 'Manoj Kumar',
     email: 'tech@sunpowersolutions.in',
@@ -155,9 +181,67 @@ export let users: UserAccount[] = [...INITIAL_USERS];
 export let roleAuditLogs: RoleAuditEntry[] = [];
 
 // ==========================================
+// Customer Smart Assignment & Queueing
+// ==========================================
+const MAX_ACTIVE_LEADS_PER_STAFF = 2;
+const ACTIVE_LEAD_STATUSES: EnquiryStatus[] = ['NEW', 'CONTACTED', 'SURVEY_SCHEDULED', 'SURVEY_DONE', 'QUOTATION_SENT'];
+
+function getActiveStaffLeadCount(staffName: string): number {
+  return customers.filter(
+    (c) => c.assignedTo === staffName && ACTIVE_LEAD_STATUSES.includes(c.status)
+  ).length;
+}
+
+function findAvailableStaffOffline(): string | null {
+  const salesStaff = ['Vikram Mehta', 'Priya Kapoor', 'Rohit Gupta'];
+  const available = salesStaff
+    .map((name) => ({ name, count: getActiveStaffLeadCount(name) }))
+    .filter((s) => s.count < MAX_ACTIVE_LEADS_PER_STAFF)
+    .sort((a, b) => a.count - b.count);
+
+  return available.length > 0 ? available[0].name : null;
+}
+
+function processQueuedOffline(releasedStaffName?: string): void {
+  while (true) {
+    const oldestQueuedIndex = customers.findIndex(
+      (c) => c.status === 'QUEUED' || c.assignedTo === 'UNASSIGNED'
+    );
+    if (oldestQueuedIndex === -1) break;
+
+    let targetStaff: string | null = null;
+    if (releasedStaffName && getActiveStaffLeadCount(releasedStaffName) < MAX_ACTIVE_LEADS_PER_STAFF) {
+      targetStaff = releasedStaffName;
+    } else {
+      targetStaff = findAvailableStaffOffline();
+    }
+
+    if (!targetStaff) break;
+
+    customers[oldestQueuedIndex] = {
+      ...customers[oldestQueuedIndex],
+      assignedTo: targetStaff,
+      status: 'NEW',
+      updatedAt: new Date().toISOString(),
+    };
+  }
+}
+
+// ==========================================
 // Customer Mutations & Queries
 // ==========================================
 export function addCustomer(c: Customer): Customer {
+  if (!c.assignedTo || c.assignedTo === 'UNASSIGNED' || c.assignedTo === 'AUTO') {
+    const availableStaff = findAvailableStaffOffline();
+    if (availableStaff) {
+      c.assignedTo = availableStaff;
+      c.status = 'NEW';
+    } else {
+      c.assignedTo = 'UNASSIGNED';
+      c.status = 'QUEUED';
+    }
+  }
+
   customers.unshift(c);
   persistDb();
   return c;
@@ -166,7 +250,16 @@ export function addCustomer(c: Customer): Customer {
 export function updateCustomer(id: string, data: Partial<Customer>): Customer {
   const index = customers.findIndex((c) => c.id === id);
   if (index !== -1) {
+    const existing = customers[index];
+    const wasActive = ACTIVE_LEAD_STATUSES.includes(existing.status);
+    const isNowInactive = data.status && ['CONVERTED', 'CLOSED_LOST'].includes(data.status);
+
     customers[index] = { ...customers[index], ...data, updatedAt: new Date().toISOString() };
+
+    if (wasActive && isNowInactive && existing.assignedTo) {
+      processQueuedOffline(existing.assignedTo);
+    }
+
     persistDb();
     return customers[index];
   }

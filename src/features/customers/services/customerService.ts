@@ -52,7 +52,7 @@ export const customerService = {
   /**
    * Saves a new customer
    */
-  async addCustomer(data: CustomerFormData & { status?: EnquiryStatus }): Promise<Customer> {
+  async addCustomer(data: Omit<CustomerFormData, 'assignedTo'> & { assignedTo?: string; status?: EnquiryStatus }): Promise<Customer> {
     if (!USE_MOCK_DATA) {
       try {
         const res = await apiClient.post<{ success: boolean; data: Customer }>('/customers', data);
@@ -80,7 +80,7 @@ export const customerService = {
       subsidyRequired: Boolean(data.subsidyRequired),
       enquirySource: data.enquirySource,
       notes: data.notes || '',
-      assignedTo: data.assignedTo,
+      assignedTo: data.assignedTo || '',
       status: data.status || 'NEW',
       createdAt: now,
       updatedAt: now,

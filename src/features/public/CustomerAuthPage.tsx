@@ -4,8 +4,8 @@ import { Card } from '../../components/ui/Card';
 import { useToast } from '../../context/ToastContext';
 import {
   customers,
-  addCustomer,
 } from '../../store/inMemoryDb';
+import { customerService } from '../customers/services/customerService';
 import { Customer } from '../../types/customer';
 import {
   SunMedium,
@@ -130,7 +130,7 @@ export const CustomerAuthPage: React.FC = () => {
     }
 
     setIsRegisterSubmitting(true);
-    setTimeout(() => {
+    setTimeout(async () => {
       // Check if phone already registered
       const existing = customers.find((c) => c.phone.replace(/\D/g, '') === cleanPhone);
       if (existing) {
@@ -149,37 +149,43 @@ export const CustomerAuthPage: React.FC = () => {
         '10kW+': 10,
       };
 
-      const newId = `CUST-${String(customers.length + 1).padStart(3, '0')}`;
-      const newCustomer: Customer = {
-        id: newId,
-        name: name.trim(),
-        phone: cleanPhone,
-        email: email.trim() || `${cleanPhone}@sunpower.customer`,
-        address: address.trim() || `${city}, India`,
-        city: city.trim(),
-        pincode: pinCode.trim() || '110001',
-        monthlyBill: billNum,
-        requiredCapacityKW: kwMap[capacity] || 3,
-        systemType: systemType,
-        subsidyRequired: true,
-        enquirySource: 'WEB_FORM',
-        status: 'NEW',
-        assignedTo: 'Vikram Mehta',
-        notes: `Customer registered via SunPower Web Portal. DISCOM CA No: ${consumerNumber || 'Pending'}. Sizing: ${capacity}.`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+      try {
+        const created = await customerService.addCustomer({
+          name: name.trim(),
+          phone: cleanPhone,
+          email: email.trim() || `${cleanPhone}@sunpower.customer`,
+          address: address.trim() || `${city}, India`,
+          city: city.trim(),
+          pincode: pinCode.trim() || '110001',
+          monthlyBill: billNum,
+          requiredCapacityKW: kwMap[capacity] || 3,
+          systemType: systemType,
+          subsidyRequired: true,
+          enquirySource: 'WEB_FORM',
+          notes: `Customer registered via SunPower Web Portal. DISCOM CA No: ${consumerNumber || 'Pending'}. Sizing: ${capacity}.`,
+        });
 
-      addCustomer(newCustomer);
-      setCustomerSession(newCustomer);
-      setIsRegisterSubmitting(false);
+        setCustomerSession(created);
+        setIsRegisterSubmitting(false);
 
-      showToast(
-        'Account Created Successfully!',
-        'Your solar application has been registered. You can now track PM Surya Ghar subsidy and site survey.',
-        'success'
-      );
-      navigate('/portal');
+        if (created.status === 'QUEUED') {
+          showToast(
+            'Account Created & Queued',
+            'Your application has been registered. All solar consultants are currently busy, so you are placed in priority queue and will be assigned shortly.',
+            'warning'
+          );
+        } else {
+          showToast(
+            'Account Created Successfully!',
+            `Your solar application has been registered and assigned to consultant ${created.assignedTo}.`,
+            'success'
+          );
+        }
+        navigate('/portal');
+      } catch (err) {
+        setIsRegisterSubmitting(false);
+        showToast('Registration Error', 'Unable to register application. Please try again.', 'error');
+      }
     }, 600);
   };
 

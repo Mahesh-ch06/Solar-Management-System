@@ -19,6 +19,7 @@ interface CustomerFormDrawerProps {
 }
 
 const SALES_EXECUTIVES = [
+  { value: '', label: '✨ Auto-Assign (Least Busy Available Consultant)' },
   { value: 'Vikram Mehta', label: 'Vikram Mehta (Sr. Sales Manager)' },
   { value: 'Priya Kapoor', label: 'Priya Kapoor (Key Accounts)' },
   { value: 'Rohit Gupta', label: 'Rohit Gupta (Field Sales Lead)' },
@@ -74,7 +75,7 @@ export const CustomerFormDrawer: React.FC<CustomerFormDrawerProps> = ({
       subsidyRequired: true,
       enquirySource: 'WEB_FORM',
       notes: '',
-      assignedTo: 'Vikram Mehta',
+      assignedTo: '',
     },
   });
 
@@ -109,7 +110,7 @@ export const CustomerFormDrawer: React.FC<CustomerFormDrawerProps> = ({
         subsidyRequired: true,
         enquirySource: 'WEB_FORM',
         notes: '',
-        assignedTo: 'Vikram Mehta',
+        assignedTo: '',
       });
     }
   }, [customerToEdit, isOpen, reset]);
