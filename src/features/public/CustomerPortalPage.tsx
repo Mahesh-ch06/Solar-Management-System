@@ -26,6 +26,7 @@ import {
   Search,
   CheckCircle2,
   ShieldCheck,
+  ShieldAlert,
   Phone,
   ArrowLeft,
   AlertCircle,
@@ -34,6 +35,7 @@ import {
   Mail,
   Send,
   Lock,
+  IndianRupee,
 } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { emailService } from '../../services/emailService';
@@ -49,6 +51,7 @@ export const CustomerPortalPage: React.FC = () => {
   // EmailJS loading states
   const [sendingMilestoneIdx, setSendingMilestoneIdx] = useState<number | null>(null);
   const [isSendingInvoice, setIsSendingInvoice] = useState(false);
+  const [isSendingAdvance, setIsSendingAdvance] = useState(false);
   const [sendingWarrantyId, setSendingWarrantyId] = useState<string | null>(null);
 
   const handleSearch = (query: string) => {
@@ -295,6 +298,54 @@ export const CustomerPortalPage: React.FC = () => {
       showToast('Dispatch Error', msg, 'error');
     } finally {
       setIsSendingInvoice(false);
+    }
+  };
+
+  // Send Customer Advance Payment Receipt via EmailJS
+  const handleSendAdvanceEmail = async () => {
+    if (!customer) return;
+    const targetEmail =
+      customer.email?.trim() ||
+      (customer.phone === '7013295712'
+        ? 'maheshch1094@gmail.com'
+        : `${customer.phone.replace(/\D/g, '')}@customer.sunpower.in`);
+
+    const capacity = customer.requiredCapacityKW || 3;
+    const totalCost = capacity * 75000;
+    const advanceAmount = capacity <= 2 ? 25000 : capacity <= 3 ? 35000 : capacity * 15000;
+
+    try {
+      setIsSendingAdvance(true);
+      const res = await emailService.notifyAdvancePaymentReceived({
+        toEmail: targetEmail,
+        customerName: customer.name,
+        advanceAmount: advanceAmount,
+        totalProjectCost: totalCost,
+        bookingReference: `ADV-${customer.id.replace(/\D/g, '').slice(-4) || '2026'}`,
+        paymentMethod: 'UPI / Net Banking (DISCOM Verified)',
+        transactionId: `TXN${Date.now().toString().slice(-8)}`,
+        receiptNumber: `RCP-2026-${customer.id.replace(/\D/g, '').slice(-4) || '1021'}`,
+        capacityKW: capacity,
+      });
+
+      if (res.isSimulatedFallback) {
+        showToast(
+          'Advance Receipt Queued (Simulated)',
+          `Advance payment receipt of ₹${advanceAmount.toLocaleString('en-IN')} queued for ${targetEmail}.`,
+          'info'
+        );
+      } else {
+        showToast(
+          'Advance Receipt Dispatched',
+          `Advance payment receipt of ₹${advanceAmount.toLocaleString('en-IN')} sent to ${targetEmail} via EmailJS.`,
+          'success'
+        );
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to send advance payment receipt';
+      showToast('Dispatch Error', msg, 'error');
+    } finally {
+      setIsSendingAdvance(false);
     }
   };
 
@@ -548,6 +599,17 @@ export const CustomerPortalPage: React.FC = () => {
                   <Button
                     variant="outline"
                     size="sm"
+                    isLoading={isSendingAdvance}
+                    leftIcon={<IndianRupee className="w-3.5 h-3.5 text-emerald-600" />}
+                    onClick={handleSendAdvanceEmail}
+                    className="border-emerald-300 bg-emerald-50/50 hover:bg-emerald-100/70 text-slate-900 text-xs font-semibold"
+                  >
+                    Email Advance Receipt (EmailJS)
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
                     isLoading={isSendingInvoice}
                     leftIcon={<Mail className="w-3.5 h-3.5 text-amber-600" />}
                     onClick={handleSendInvoiceEmail}
@@ -741,47 +803,75 @@ export const CustomerPortalPage: React.FC = () => {
             </Card>
 
             {/* Warranties & Registered Equipment Card */}
-            {customerWarranties.length > 0 && (
-              <Card className="bg-white border-slate-200 p-6 rounded-2xl shadow-sm">
-                <CardHeader className="p-0 mb-4 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-5 h-5 text-emerald-600" />
-                    <CardTitle className="text-base text-slate-900">Registered Equipment Warranties</CardTitle>
-                  </div>
-                  <Badge variant="emerald" size="sm">Active Coverage</Badge>
-                </CardHeader>
-                <div className="divide-y divide-slate-100">
-                  {customerWarranties.map((w) => {
-                    const isSendingThisWarranty = sendingWarrantyId === w.id;
-
-                    return (
-                      <div key={w.id} className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                        <div>
-                          <p className="font-bold text-slate-900">{w.itemName}</p>
-                          <p className="text-slate-500 text-[11px] font-mono mt-0.5">SN: {w.serialNumber} • {w.brand}</p>
-                        </div>
-                        <div className="flex items-center gap-3 justify-between sm:justify-end">
-                          <div className="text-left sm:text-right">
-                            <p className="text-emerald-700 font-bold">{w.warrantyYears} Years OEM Warranty</p>
-                            <p className="text-[11px] text-slate-500">Expires: {formatDate(w.warrantyExpiryDate)}</p>
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            isLoading={isSendingThisWarranty}
-                            leftIcon={<Mail className="w-3.5 h-3.5 text-amber-600" />}
-                            onClick={() => handleSendWarrantyEmail(w)}
-                            className="border-amber-300 text-slate-800 text-xs font-semibold hover:bg-amber-50"
-                          >
-                            Email Certificate
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
+            <Card className="bg-white border-slate-200 p-6 rounded-2xl shadow-sm">
+              <CardHeader className="p-0 mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className={`w-5 h-5 ${customerWarranties.length > 0 ? 'text-emerald-600' : 'text-amber-500'}`} />
+                  <CardTitle className="text-base text-slate-900">
+                    {customerWarranties.length > 0
+                      ? 'Registered Equipment Warranties'
+                      : 'Equipment Warranties & Certificate Status'}
+                  </CardTitle>
                 </div>
-              </Card>
-            )}
+                {customerWarranties.length > 0 ? (
+                  <Badge variant="emerald" size="sm">Issued by Administrator • Active Coverage</Badge>
+                ) : (
+                  <Badge variant="amber" size="sm">Pending Admin Issuance</Badge>
+                )}
+              </CardHeader>
+
+              {customerWarranties.length === 0 ? (
+                <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200 text-xs text-amber-950 space-y-2">
+                  <div className="flex items-center gap-2 font-bold text-amber-900">
+                    <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Official Warranty Certificate Issuance Notice</span>
+                  </div>
+                  <p className="leading-relaxed text-amber-900/90">
+                    25-Year Tier-1 Solar PV Modules and 10-Year High-Efficiency Inverter digital warranty certificates are verified and officially issued by the Solar Administrator upon final commissioning & grid synchronization (Step 6).
+                  </p>
+                  <div className="pt-2 border-t border-amber-200/80 flex flex-wrap items-center justify-between gap-2 text-[11px] text-amber-800">
+                    <span>First Issuance: <strong>Admin Mandatory Step 6 Handover</strong></span>
+                    <span>Customer Re-download / Resend: <strong>Enabled immediately once issued</strong></span>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center justify-between">
+                    <span>Official digital warranty certificate issued by administrator. You can resend your certificate anytime.</span>
+                  </div>
+                  <div className="divide-y divide-slate-100">
+                    {customerWarranties.map((w) => {
+                      const isSendingThisWarranty = sendingWarrantyId === w.id;
+
+                      return (
+                        <div key={w.id} className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                          <div>
+                            <p className="font-bold text-slate-900">{w.itemName}</p>
+                            <p className="text-slate-500 text-[11px] font-mono mt-0.5">SN: {w.serialNumber} • {w.brand}</p>
+                          </div>
+                          <div className="flex items-center gap-3 justify-between sm:justify-end">
+                            <div className="text-left sm:text-right">
+                              <p className="text-emerald-700 font-bold">{w.warrantyYears} Years OEM Warranty</p>
+                              <p className="text-[11px] text-slate-500">Expires: {formatDate(w.warrantyExpiryDate)}</p>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              isLoading={isSendingThisWarranty}
+                              leftIcon={<Mail className="w-3.5 h-3.5 text-amber-600" />}
+                              onClick={() => handleSendWarrantyEmail(w)}
+                              className="border-amber-300 text-slate-800 text-xs font-semibold hover:bg-amber-50"
+                            >
+                              Resend Certificate (EmailJS)
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </Card>
 
             {/* Need Assistance Card */}
             <Card className="bg-slate-50 border-slate-200 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">

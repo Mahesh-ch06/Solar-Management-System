@@ -463,6 +463,65 @@ export function findWarrantyBySerial(sn: string): WarrantyRecord | undefined {
   return warrantyRecords.find((w) => w.serialNumber.trim().toUpperCase() === norm);
 }
 
+export function issueCustomerWarranty(customerId: string): WarrantyRecord[] {
+  const customer = customers.find((c) => c.id === customerId);
+  if (!customer) throw new Error('Customer not found');
+
+  const now = new Date();
+  const expiryDate = new Date();
+  expiryDate.setFullYear(now.getFullYear() + 25);
+
+  const inverterExpiry = new Date();
+  inverterExpiry.setFullYear(now.getFullYear() + 10);
+
+  const panelWarranty: WarrantyRecord = {
+    id: `warr-${customerId}-pnl`,
+    serialNumber: `PNL-2026-${customer.id.replace(/\D/g, '') || '01'}-001`,
+    inventoryItemId: 'inv-item-01',
+    itemName: `${customer.requiredCapacityKW || 3} kW Tier-1 Monocrystalline Solar Panels (540W)`,
+    itemCategory: 'SOLAR_PANEL',
+    brand: 'Adani Solar',
+    model: 'AS540-144',
+    customerId: customer.id,
+    customerName: customer.name,
+    customerPhone: customer.phone,
+    customerEmail: customer.email || (customer.phone === '7013295712' ? 'maheshch1094@gmail.com' : undefined),
+    dispatchOrderId: `disp-${customer.id}`,
+    dispatchDate: now.toISOString().split('T')[0],
+    warrantyYears: 25,
+    warrantyExpiryDate: expiryDate.toISOString().split('T')[0],
+    status: 'ACTIVE',
+    installationDate: now.toISOString().split('T')[0],
+  };
+
+  const inverterWarranty: WarrantyRecord = {
+    id: `warr-${customerId}-inv`,
+    serialNumber: `INV-2026-${customer.id.replace(/\D/g, '') || '01'}-002`,
+    inventoryItemId: 'inv-item-03',
+    itemName: `${customer.requiredCapacityKW || 3} kW High-Efficiency On-Grid Inverter`,
+    itemCategory: 'INVERTER',
+    brand: 'Growatt',
+    model: 'MIN 5000TL-X',
+    customerId: customer.id,
+    customerName: customer.name,
+    customerPhone: customer.phone,
+    customerEmail: customer.email || (customer.phone === '7013295712' ? 'maheshch1094@gmail.com' : undefined),
+    dispatchOrderId: `disp-${customer.id}`,
+    dispatchDate: now.toISOString().split('T')[0],
+    warrantyYears: 10,
+    warrantyExpiryDate: inverterExpiry.toISOString().split('T')[0],
+    status: 'ACTIVE',
+    installationDate: now.toISOString().split('T')[0],
+  };
+
+  // Remove any old placeholder and add fresh active ones
+  warrantyRecords = warrantyRecords.filter((w) => w.customerId !== customerId);
+  warrantyRecords.unshift(panelWarranty, inverterWarranty);
+  persistDb();
+
+  return [panelWarranty, inverterWarranty];
+}
+
 // ==========================================
 // Service Tickets
 // ==========================================

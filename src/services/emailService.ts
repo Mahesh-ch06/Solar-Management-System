@@ -243,6 +243,61 @@ export const emailService = {
   },
 
   /**
+   * Dispatched when advance payment is collected for a customer lead
+   */
+  async notifyAdvancePaymentReceived(payload: {
+    toEmail: string;
+    customerName: string;
+    advanceAmount: number;
+    totalAmount?: number;
+    totalProjectCost?: number;
+    referenceId?: string;
+    bookingReference?: string;
+    paymentMode?: string;
+    paymentMethod?: string;
+    receiptNumber?: string;
+    transactionId?: string;
+    subsidyAmount?: number;
+    nextMilestoneTitle?: string;
+    capacityKW?: number;
+  }): Promise<EmailSendResult> {
+    const total = payload.totalProjectCost ?? payload.totalAmount ?? (payload.capacityKW ? payload.capacityKW * 75000 : 225000);
+    const refId = payload.bookingReference ?? payload.referenceId ?? `ADV-${Date.now().toString().slice(-6)}`;
+    const method = payload.paymentMethod ?? payload.paymentMode ?? 'UPI / Net Banking';
+
+    const formattedAdvance = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(payload.advanceAmount);
+    const formattedTotal = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(total);
+    const balanceDue = Math.max(0, total - payload.advanceAmount - (payload.subsidyAmount || 0));
+    const formattedBalance = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(balanceDue);
+
+    return sendEmailNotification({
+      to_email: payload.toEmail,
+      to_name: payload.customerName,
+      subject: `Advance Payment Receipt: ${formattedAdvance} - SunPower Rooftop Solar`,
+      message:
+        `Dear ${payload.customerName},\n\n` +
+        `We have received your advance project booking payment of ${formattedAdvance} for your solar rooftop installation!\n\n` +
+        `-----------------------------------------\n` +
+        `ADVANCE PAYMENT RECEIPT\n` +
+        `-----------------------------------------\n` +
+        `• Booking Reference: ${refId}\n` +
+        `• Receipt Number: ${payload.receiptNumber || 'REC-ADV-' + Date.now().toString().slice(-6)}\n` +
+        `• Advance Received: ${formattedAdvance}\n` +
+        `• Payment Method: ${method}\n` +
+        `• Total Project Cost: ${formattedTotal}\n` +
+        `• Remaining Balance Due: ${formattedBalance}\n` +
+        (payload.nextMilestoneTitle ? `• Next Action: ${payload.nextMilestoneTitle}\n\n` : '\n') +
+        `Your engineering procurement and DISCOM feasibility filing are now prioritized. View live status anytime on your Customer Portal:`,
+      action_url: `${window.location.origin}/portal?phone=${encodeURIComponent(payload.toEmail)}`,
+      action_label: 'View Live Portal & Tracker',
+      metadata: {
+        receipt_amount: formattedAdvance,
+        reference_id: refId,
+      },
+    });
+  },
+
+  /**
    * Dispatched when equipment is dispatched or customer requests digital warranty certificate
    */
   async notifyWarrantyCertificate(

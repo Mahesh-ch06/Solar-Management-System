@@ -15,10 +15,15 @@ import {
   Trash2,
   Sparkles,
   Mail,
+  Compass,
+  IndianRupee,
+  ShieldCheck,
 } from 'lucide-react';
 import { Customer, EnquiryStatus } from '../../types/customer';
 import { customerService } from './services/customerService';
 import { CustomerFormDrawer } from './components/CustomerFormDrawer';
+import { WorkerGuidanceDrawer, MilestoneStepGuide } from './components/WorkerGuidanceDrawer';
+import { AdvancePaymentModal } from './components/AdvancePaymentModal';
 import { useToast } from '../../context/ToastContext';
 import { emailService } from '../../services/emailService';
 import { formatCurrency, formatCapacity } from '../../utils/formatters';
@@ -343,6 +348,14 @@ export const CustomersPage: React.FC = () => {
     setCurrentPage(1);
   };
 
+  // Worker Guidance Drawer State
+  const [isGuidanceOpen, setIsGuidanceOpen] = useState(false);
+  const [customerForGuidance, setCustomerForGuidance] = useState<Customer | null>(null);
+
+  // Advance Payment Modal State
+  const [isAdvanceModalOpen, setIsAdvanceModalOpen] = useState(false);
+  const [customerForAdvance, setCustomerForAdvance] = useState<Customer | null>(null);
+
   // Drawer openers
   const handleAddNew = () => {
     setCustomerToEdit(null);
@@ -352,6 +365,99 @@ export const CustomersPage: React.FC = () => {
   const handleEdit = (customer: Customer) => {
     setCustomerToEdit(customer);
     setIsDrawerOpen(true);
+  };
+
+  const handleOpenGuidance = (customer: Customer) => {
+    setCustomerForGuidance(customer);
+    setIsGuidanceOpen(true);
+  };
+
+  const handleOpenAdvanceModal = (customer: Customer) => {
+    setCustomerForAdvance(customer);
+    setIsAdvanceModalOpen(true);
+  };
+
+  const handleAdvanceMilestone = async (cust: Customer, newStepIdx: number) => {
+    const updated = await customerService.updateCustomerMilestone(cust.id, newStepIdx);
+    if (updated) {
+      setCustomerForGuidance(updated);
+    }
+    queryClient.invalidateQueries({ queryKey: ['customers'] });
+  };
+
+  const handleSendMilestoneEmailFromGuide = async (cust: Customer, step: MilestoneStepGuide) => {
+    const targetEmail =
+      cust.email?.trim() ||
+      (cust.phone === '7013295712' ? 'maheshch1094@gmail.com' : `${cust.phone.replace(/\D/g, '')}@customer.sunpower.in`);
+
+    const res = await emailService.notifyTrackingStageUpdate({
+      toEmail: targetEmail,
+      customerName: cust.name,
+      stepTitle: step.title,
+      stepIndex: step.index,
+      totalSteps: 6,
+      description: step.desc,
+      referenceId: cust.id,
+      nextMilestone: step.index < 6 ? undefined : undefined,
+    });
+
+    if (res.isSimulatedFallback) {
+      showToast(
+        'Email Queued (Simulated)',
+        `Milestone Step ${step.index} email queued for ${targetEmail}.`,
+        'info'
+      );
+    } else {
+      showToast(
+        'Milestone Email Sent',
+        `Milestone Step ${step.index} notification emailed to ${targetEmail} via EmailJS.`,
+        'success'
+      );
+    }
+  };
+
+  const handleAdminIssueWarranty = async (cust: Customer) => {
+    const targetEmail =
+      cust.email?.trim() ||
+      (cust.phone === '7013295712' ? 'maheshch1094@gmail.com' : `${cust.phone.replace(/\D/g, '')}@customer.sunpower.in`);
+
+    try {
+      const warranties = await customerService.issueWarranty(cust.id);
+      if (warranties && warranties.length > 0) {
+        const primary = warranties[0];
+        await emailService.notifyWarrantyCertificate({
+          toEmail: targetEmail,
+          customerName: cust.name,
+          serialNumber: primary.serialNumber,
+          itemName: primary.itemName,
+          itemCategory: primary.itemCategory,
+          brand: primary.brand,
+          model: primary.model,
+          warrantyYears: primary.warrantyYears,
+          warrantyExpiryDate: primary.warrantyExpiryDate,
+          dispatchDate: primary.dispatchDate,
+          status: primary.status,
+        });
+      }
+
+      await customerService.updateCustomerMilestone(cust.id, 5, 'CONVERTED');
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['warrantyRecords'] });
+
+      // Update guidance drawer state if currently open
+      setCustomerForGuidance((prev) =>
+        prev?.id === cust.id ? { ...prev, milestoneStep: 5, status: 'CONVERTED' } : prev
+      );
+
+      showToast(
+        'Warranty Issued & Emailed',
+        `Official 25-Yr Panel & 10-Yr Inverter digital warranty issued and certificate dispatched to ${targetEmail} via EmailJS.`,
+        'success'
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to issue warranty';
+      showToast('Issuance Error', msg, 'error');
+    }
   };
 
   // Stats calculation
@@ -755,6 +861,40 @@ export const CustomersPage: React.FC = () => {
                       {/* Actions */}
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {/* Worker Step-by-Step Guidance Button */}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleOpenGuidance(cust)}
+                            title="Open Worker Step-by-Step Guidance & Dedicated Page Navigation"
+                            className="border-amber-300 bg-amber-50/70 hover:bg-amber-100 text-amber-950 text-xs font-bold px-2 py-1 flex items-center gap-1 shrink-0 shadow-2xs"
+                          >
+                            <Compass className="w-3.5 h-3.5 text-amber-600" />
+                            <span>Guidance</span>
+                          </Button>
+
+                          {/* Quick Advance Payment Receipt Email Button */}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleOpenAdvanceModal(cust)}
+                            title="Send Advance Payment Receipt Email (EmailJS)"
+                            className="p-1.5 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50"
+                          >
+                            <IndianRupee className="w-3.5 h-3.5" />
+                          </Button>
+
+                          {/* Quick Admin Issue Warranty Button */}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleAdminIssueWarranty(cust)}
+                            title="Admin: Issue Official 25-Yr Panel & 10-Yr Inverter Warranty (EmailJS)"
+                            className="p-1.5 text-amber-700 hover:text-amber-900 hover:bg-amber-50"
+                          >
+                            <ShieldCheck className="w-3.5 h-3.5" />
+                          </Button>
+
                           {/* Quick Status Select */}
                           <div className="relative inline-block">
                             <select
@@ -901,6 +1041,30 @@ export const CustomersPage: React.FC = () => {
           setCustomerToEdit(null);
         }}
         customerToEdit={customerToEdit}
+      />
+
+      {/* Worker Project Guidance Drawer */}
+      <WorkerGuidanceDrawer
+        isOpen={isGuidanceOpen}
+        onClose={() => {
+          setIsGuidanceOpen(false);
+          setCustomerForGuidance(null);
+        }}
+        customer={customerForGuidance}
+        onAdvanceMilestone={handleAdvanceMilestone}
+        onSendMilestoneEmail={handleSendMilestoneEmailFromGuide}
+        onOpenAdvanceModal={handleOpenAdvanceModal}
+        onIssueWarranty={handleAdminIssueWarranty}
+      />
+
+      {/* Advance Payment Receipt Modal */}
+      <AdvancePaymentModal
+        isOpen={isAdvanceModalOpen}
+        onClose={() => {
+          setIsAdvanceModalOpen(false);
+          setCustomerForAdvance(null);
+        }}
+        customer={customerForAdvance}
       />
     </div>
   );

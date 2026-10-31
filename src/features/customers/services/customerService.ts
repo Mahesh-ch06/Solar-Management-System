@@ -6,7 +6,9 @@ import {
   updateCustomer as dbUpdateCustomer,
   deleteCustomer as dbDeleteCustomer,
   deleteDuplicateCustomers as dbDeleteDuplicateCustomers,
+  issueCustomerWarranty as dbIssueCustomerWarranty,
 } from '../../../store/inMemoryDb';
+import { WarrantyRecord } from '../../../types/operations';
 import { apiClient, USE_MOCK_DATA } from '../../../api/apiClient';
 
 const SIMULATED_DELAY_MS = 150;
@@ -168,6 +170,14 @@ export const customerService = {
   async deleteDuplicateCustomers(): Promise<number> {
     await delay();
     return dbDeleteDuplicateCustomers();
+  },
+
+  /**
+   * Officially issues digital warranty certificates for customer (Admin action)
+   */
+  async issueWarranty(customerId: string): Promise<WarrantyRecord[]> {
+    await delay();
+    return dbIssueCustomerWarranty(customerId);
   },
 };
 
