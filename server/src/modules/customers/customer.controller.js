@@ -3,7 +3,7 @@
  * 
  * Purpose:
  * Manages solar prospective leads, qualification criteria (kW capacity, subsidy eligibility),
- * and pipeline stage transitions (NEW -> CONTACTED -> SURVEY_SCHEDULED -> QUOTATION_SENT -> CONVERTED).
+ * and pipeline stage transitions (NEW -> CONTACTED -> SURVEY_SCHEDULED -> QUOTATION_SENT -> CONVERTED -> CLOSED_LOST).
  * 
  * Why in this file?
  * Centralizes all customer CRM functionality for Member 2 without interfering with inventory or installations.
@@ -14,12 +14,39 @@ import { db } from '../../db/database.js';
 export const customerController = {
   /**
    * GET /api/v1/customers
-   * Fetches all leads and converted clients
+   * Fetches all leads and converted clients with optional search and status filtering
    */
   getCustomers(req, res, next) {
     try {
-      const customers = db.prepare('SELECT * FROM customers ORDER BY createdAt DESC').all();
-      return res.status(200).json({ success: true, data: customers });
+      const { search, status, assignedTo } = req.query;
+
+      let sql = 'SELECT * FROM customers WHERE 1=1';
+      const params = [];
+
+      if (status) {
+        sql += ' AND status = ?';
+        params.push(status);
+      }
+
+      if (assignedTo) {
+        sql += ' AND assignedTo = ?';
+        params.push(assignedTo);
+      }
+
+      if (search && search.trim()) {
+        const term = `%${search.trim()}%`;
+        sql += ' AND (name LIKE ? OR phone LIKE ? OR email LIKE ? OR city LIKE ?)';
+        params.push(term, term, term, term);
+      }
+
+      sql += ' ORDER BY createdAt DESC';
+
+      const customers = db.prepare(sql).all(...params);
+      return res.status(200).json({
+        success: true,
+        count: customers.length,
+        data: customers,
+      });
     } catch (err) {
       next(err);
     }
@@ -27,7 +54,7 @@ export const customerController = {
 
   /**
    * GET /api/v1/customers/:id
-   * Fetches full profile of a single customer
+   * Fetches full profile of a single customer, including linked surveys and quotations
    */
   getCustomerById(req, res, next) {
     try {
@@ -38,7 +65,28 @@ export const customerController = {
         return res.status(404).json({ success: false, error: 'Customer not found.' });
       }
 
-      return res.status(200).json({ success: true, data: customer });
+      // Fetch associated surveys
+      const surveys = db.prepare('SELECT * FROM surveys WHERE customerId = ? ORDER BY createdAt DESC').all(id);
+
+      // Fetch associated quotations
+      const rawQuotations = db.prepare('SELECT * FROM quotations WHERE customerId = ? ORDER BY createdAt DESC').all(id);
+      const quotations = rawQuotations.map((q) => ({
+        ...q,
+        bomLines: q.bomLines ? JSON.parse(q.bomLines) : [],
+      }));
+
+      // Fetch associated orders
+      const orders = db.prepare('SELECT * FROM orders WHERE customerId = ? ORDER BY createdAt DESC').all(id);
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          ...customer,
+          surveys,
+          quotations,
+          orders,
+        },
+      });
     } catch (err) {
       next(err);
     }
@@ -51,6 +99,7 @@ export const customerController = {
   createCustomer(req, res, next) {
     try {
       const {
+        id: customId,
         name,
         phone,
         email,
@@ -74,9 +123,31 @@ export const customerController = {
         });
       }
 
-      // Generate incremental customer ID: cust-XX
-      const countRow = db.prepare('SELECT COUNT(*) as count FROM customers').get();
-      const id = `cust-${String(countRow.count + 1).padStart(2, '0')}`;
+      // Determine customer ID
+      let id = customId;
+      if (!id) {
+        const rows = db.prepare("SELECT id FROM customers WHERE id LIKE 'cust-%'").all();
+        let maxId = 0;
+        for (const r of rows) {
+          const num = parseInt(r.id.replace('cust-', ''), 10);
+          if (!isNaN(num) && num > maxId) {
+            maxId = num;
+          }
+        }
+        id = `cust-${String(maxId + 1).padStart(2, '0')}`;
+      } else {
+        // Check if custom ID already exists
+        const exists = db.prepare('SELECT id FROM customers WHERE id = ?').get(id);
+        if (exists) {
+          return res.status(409).json({ success: false, error: `Customer with ID ${id} already exists.` });
+        }
+      }
+
+      const validSystemTypes = ['ON_GRID', 'OFF_GRID', 'HYBRID'];
+      const resolvedSystemType = validSystemTypes.includes(systemType) ? systemType : 'ON_GRID';
+
+      const validStatuses = ['NEW', 'CONTACTED', 'SURVEY_SCHEDULED', 'QUOTATION_SENT', 'CONVERTED', 'CLOSED_LOST'];
+      const resolvedStatus = validStatuses.includes(status) ? status : 'NEW';
 
       const insert = db.prepare(`
         INSERT INTO customers (
@@ -100,24 +171,28 @@ export const customerController = {
         pincode.trim(),
         Number(monthlyBill) || 0,
         Number(requiredCapacityKW) || 1,
-        systemType || 'ON_GRID',
-        subsidyRequired ? 1 : 0,
+        resolvedSystemType,
+        subsidyRequired === false || subsidyRequired === 0 ? 0 : 1,
         enquirySource || 'WEB_FORM',
-        status || 'NEW',
-        notes || '',
-        assignedTo || ''
+        resolvedStatus,
+        notes ? notes.trim() : '',
+        assignedTo ? assignedTo.trim() : ''
       );
 
       const created = db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
-      return res.status(201).json({ success: true, data: created });
+      return res.status(201).json({
+        success: true,
+        message: 'Customer lead registered successfully.',
+        data: created,
+      });
     } catch (err) {
       next(err);
     }
   },
 
   /**
-   * PUT /api/v1/customers/:id
-   * Updates lead profile, assignment, or pipeline status
+   * PUT or PATCH /api/v1/customers/:id
+   * Updates lead profile, assignment, or technical requirements
    */
   updateCustomer(req, res, next) {
     try {
@@ -144,6 +219,14 @@ export const customerController = {
         notes,
         assignedTo,
       } = req.body;
+
+      if (systemType && !['ON_GRID', 'OFF_GRID', 'HYBRID'].includes(systemType)) {
+        return res.status(400).json({ success: false, error: 'Invalid systemType. Must be ON_GRID, OFF_GRID, or HYBRID.' });
+      }
+
+      if (status && !['NEW', 'CONTACTED', 'SURVEY_SCHEDULED', 'QUOTATION_SENT', 'CONVERTED', 'CLOSED_LOST'].includes(status)) {
+        return res.status(400).json({ success: false, error: 'Invalid pipeline status.' });
+      }
 
       const update = db.prepare(`
         UPDATE customers SET
@@ -184,7 +267,51 @@ export const customerController = {
       );
 
       const updated = db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
-      return res.status(200).json({ success: true, data: updated });
+      return res.status(200).json({
+        success: true,
+        message: 'Customer details updated successfully.',
+        data: updated,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  /**
+   * PATCH /api/v1/customers/:id/status
+   * Dedicated endpoint to transition customer pipeline stage
+   */
+  updateCustomerStatus(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      const validStatuses = ['NEW', 'CONTACTED', 'SURVEY_SCHEDULED', 'QUOTATION_SENT', 'CONVERTED', 'CLOSED_LOST'];
+      if (!status || !validStatuses.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          error: `Invalid status. Must be one of: ${validStatuses.join(', ')}`,
+        });
+      }
+
+      const existing = db.prepare('SELECT id FROM customers WHERE id = ?').get(id);
+      if (!existing) {
+        return res.status(404).json({ success: false, error: 'Customer not found.' });
+      }
+
+      db.prepare(`
+        UPDATE customers SET
+          status = ?,
+          updatedAt = datetime('now')
+        WHERE id = ?
+      `).run(status, id);
+
+      const updated = db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
+      return res.status(200).json({
+        success: true,
+        message: `Customer pipeline status updated to ${status}.`,
+        data: updated,
+      });
     } catch (err) {
       next(err);
     }
@@ -192,21 +319,37 @@ export const customerController = {
 
   /**
    * DELETE /api/v1/customers/:id
-   * Soft checks and removes customer if no dependencies
+   * Soft-checks dependencies before removing customer to maintain relational integrity
    */
   deleteCustomer(req, res, next) {
     try {
       const { id } = req.params;
-      const result = db.prepare('DELETE FROM customers WHERE id = ?').run(id);
 
-      if (result.changes === 0) {
+      const existing = db.prepare('SELECT id, name FROM customers WHERE id = ?').get(id);
+      if (!existing) {
         return res.status(404).json({ success: false, error: 'Customer not found.' });
       }
 
-      return res.status(200).json({ success: true, message: 'Customer deleted successfully.' });
+      // Check for related records in surveys, quotations, or orders
+      const surveyCount = db.prepare('SELECT COUNT(*) as count FROM surveys WHERE customerId = ?').get(id);
+      const quotationCount = db.prepare('SELECT COUNT(*) as count FROM quotations WHERE customerId = ?').get(id);
+      const orderCount = db.prepare('SELECT COUNT(*) as count FROM orders WHERE customerId = ?').get(id);
+
+      if (surveyCount.count > 0 || quotationCount.count > 0 || orderCount.count > 0) {
+        return res.status(409).json({
+          success: false,
+          error: `Cannot delete customer "${existing.name}". Linked records exist (${surveyCount.count} surveys, ${quotationCount.count} quotations, ${orderCount.count} orders).`,
+        });
+      }
+
+      db.prepare('DELETE FROM customers WHERE id = ?').run(id);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Customer deleted successfully.',
+      });
     } catch (err) {
       next(err);
     }
   },
 };
-

@@ -32,6 +32,8 @@ export const db = new DatabaseSync(config.dbPath);
 db.exec('PRAGMA journal_mode = WAL;');
 // Enforce Foreign Key relational constraints
 db.exec('PRAGMA foreign_keys = ON;');
+// Set busy timeout so concurrent processes wait rather than failing
+db.exec('PRAGMA busy_timeout = 5000;');
 
 // Load and apply table schema if not already initialized
 export function initSchema() {
