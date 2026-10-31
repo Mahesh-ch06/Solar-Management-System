@@ -1,6 +1,9 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AppShell } from '../components/layout/AppShell';
+import { ProtectedRoute } from './ProtectedRoute';
 import { LoginPage } from '../features/auth/LoginPage';
+import { AdminLoginPage } from '../features/auth/AdminLoginPage';
+import { RegisterPage } from '../features/auth/RegisterPage';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { CustomersPage } from '../features/customers/CustomersPage';
 import { SurveysPage } from '../features/surveys/SurveysPage';
@@ -12,59 +15,127 @@ import { WarrantyPage } from '../features/warranty/WarrantyPage';
 import { ServiceTicketsPage } from '../features/service/ServiceTicketsPage';
 import { FinancePage } from '../features/finance/FinancePage';
 import { ReportsPage } from '../features/reports/ReportsPage';
+import { UserManagementPage } from '../features/admin/UserManagementPage';
 
 export const router = createBrowserRouter([
+  // Public Authentication Portals
   {
     path: '/login',
     element: <LoginPage />,
   },
   {
+    path: '/admin/login',
+    element: <AdminLoginPage />,
+  },
+  {
+    path: '/register',
+    element: <RegisterPage />,
+  },
+
+  // Authenticated Enterprise Application Shell
+  {
     path: '/',
-    element: <AppShell />,
+    element: (
+      <ProtectedRoute>
+        <AppShell />
+      </ProtectedRoute>
+    ),
     children: [
       {
         index: true,
-        element: <DashboardPage />,
+        element: (
+          <ProtectedRoute>
+            <DashboardPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'customers',
-        element: <CustomersPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['ADMIN', 'SALES', 'DIRECTOR']}>
+            <CustomersPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'quotations',
-        element: <QuotationsPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['ADMIN', 'SALES', 'DIRECTOR']}>
+            <QuotationsPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'surveys',
-        element: <SurveysPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['ADMIN', 'SALES', 'TECHNICIAN', 'DIRECTOR']}>
+            <SurveysPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'installations',
-        element: <InstallationsPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['ADMIN', 'TECHNICIAN', 'DIRECTOR', 'WAREHOUSE_MANAGER']}>
+            <InstallationsPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'service-tickets',
-        element: <ServiceTicketsPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['ADMIN', 'SUPPORT_AGENT', 'TECHNICIAN', 'DIRECTOR']}>
+            <ServiceTicketsPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'inventory',
-        element: <InventoryPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['ADMIN', 'WAREHOUSE_MANAGER', 'DIRECTOR']}>
+            <InventoryPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'dispatch',
-        element: <DispatchPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['ADMIN', 'WAREHOUSE_MANAGER', 'TECHNICIAN', 'DIRECTOR']}>
+            <DispatchPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'warranties',
-        element: <WarrantyPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['ADMIN', 'SUPPORT_AGENT', 'SALES', 'DIRECTOR']}>
+            <WarrantyPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'finance',
-        element: <FinancePage />,
+        element: (
+          <ProtectedRoute allowedRoles={['ADMIN', 'DIRECTOR']}>
+            <FinancePage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'reports',
-        element: <ReportsPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['ADMIN', 'DIRECTOR', 'SALES']}>
+            <ReportsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'admin/users',
+        element: (
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <UserManagementPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: '*',

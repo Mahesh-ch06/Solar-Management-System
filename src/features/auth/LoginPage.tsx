@@ -1,85 +1,103 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth, MOCK_USERS } from '../../context/AuthContext';
-import { UserRole } from '../../types/roles';
-import { ROLE_CONFIGS } from '../../constants/roles';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { getDefaultRouteForRole } from '../../router/ProtectedRoute';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
 import { useToast } from '../../context/ToastContext';
-import { SunMedium, Shield, ArrowRight, Lock, Mail } from 'lucide-react';
+import { SunMedium, ArrowRight, Lock, Mail, Shield, AlertCircle, Info } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { switchRole } = useAuth();
+  const { login, user } = useAuth();
   const { showToast } = useToast();
 
-  const [email, setEmail] = useState('rajesh.admin@sunpowersolutions.in');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showDemoCredentials, setShowDemoCredentials] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      showToast('Validation Error', 'Please enter email and password', 'error');
+    setErrorMessage('');
+
+    if (!email.trim() || !password.trim()) {
+      setErrorMessage('Please enter both your email address and password.');
       return;
     }
 
-    setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      showToast('Welcome Back', 'Logged in successfully to SunPower ERP', 'success');
-      navigate('/');
-    }, 400);
-  };
+    try {
+      setIsSubmitting(true);
+      const result = await login({ email, password }, false);
 
-  const handleFastRoleSelect = (role: UserRole) => {
-    switchRole(role);
-    const user = MOCK_USERS[role];
-    setEmail(user.email);
-    showToast('Role Switched', `Active credentials set to ${ROLE_CONFIGS[role].label}`, 'info');
-    navigate('/');
+      if (!result.success) {
+        setErrorMessage(result.error || 'Authentication failed. Please verify credentials.');
+        return;
+      }
+
+      showToast('Welcome Back', 'Logged in successfully to SunPower ERP', 'success');
+      // If user state is populated, redirect to their role-specific dashboard
+      const targetRoute = user ? getDefaultRouteForRole(user.role) : '/';
+      navigate(targetRoute);
+    } catch {
+      setErrorMessage('A network error occurred while connecting to the authentication service.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-      {/* Background Solar Accents */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-solar-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center relative z-10">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-solar-800 text-amber-400 mb-4 shadow-xl border border-solar-700">
-          <SunMedium className="w-8 h-8" />
+    <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative selection:bg-solar-500 selection:text-white">
+      {/* Brand Header */}
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-solar-800 text-amber-400 mb-3 shadow-md border border-solar-700">
+          <SunMedium className="w-6 h-6" />
         </div>
-        <h2 className="text-2xl font-extrabold text-white tracking-tight">
-          SunPower Solutions ERP
-        </h2>
+        <h1 className="text-xl font-bold text-white tracking-tight">
+          SunPower Solutions
+        </h1>
         <p className="mt-1 text-xs text-slate-400">
-          Enterprise Solar Installation & Operations Platform
+          Staff Portal & Operations Management System
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
-        <Card className="p-8 shadow-2xl border-white/10 bg-slate-950/80 backdrop-blur-md">
-          <form onSubmit={handleLogin} className="space-y-4">
-            <Input
-              label="Staff Email Address"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="e.g. employee@sunpowersolutions.in"
-              leftIcon={<Mail className="w-4 h-4 text-slate-400" />}
-              className="bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
-            />
+      <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md">
+        <Card className="p-7 shadow-xl border-slate-800 bg-slate-900/90 text-slate-100">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {errorMessage && (
+              <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                <span className="leading-relaxed">{errorMessage}</span>
+              </div>
+            )}
 
-            <Input
-              label="Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              leftIcon={<Lock className="w-4 h-4 text-slate-400" />}
-              className="bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
-            />
+            <div>
+              <Input
+                label="Registered Staff Email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@sunpowersolutions.in"
+                leftIcon={<Mail className="w-4 h-4 text-slate-400" />}
+                className="bg-slate-950 border-slate-800 text-white placeholder:text-slate-500 focus:border-solar-500"
+                required
+              />
+            </div>
+
+            <div>
+              <Input
+                label="Password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••••••"
+                leftIcon={<Lock className="w-4 h-4 text-slate-400" />}
+                className="bg-slate-950 border-slate-800 text-white placeholder:text-slate-500 focus:border-solar-500"
+                required
+              />
+            </div>
 
             <Button
               type="submit"
@@ -89,38 +107,50 @@ export const LoginPage: React.FC = () => {
               isLoading={isSubmitting}
               rightIcon={<ArrowRight className="w-4 h-4" />}
             >
-              Sign In to ERP Portal
+              Sign In to Workspace
             </Button>
           </form>
 
-          {/* Quick Role-Switcher Testing Shortcuts */}
-          <div className="mt-6 pt-5 border-t border-slate-800">
-            <div className="flex items-center gap-1.5 mb-2.5">
-              <Shield className="w-3.5 h-3.5 text-solar-400" />
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                1-Click Role Preview (Dev Mode)
+          {/* Navigation to Registration & Admin Portal */}
+          <div className="mt-6 pt-5 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
+            <span>
+              New employee?{' '}
+              <Link to="/register" className="text-solar-400 hover:text-solar-300 font-semibold underline underline-offset-2">
+                Register staff account
+              </Link>
+            </span>
+            <Link
+              to="/admin/login"
+              className="flex items-center gap-1 text-slate-400 hover:text-slate-200 transition-colors"
+            >
+              <Shield className="w-3.5 h-3.5 text-solar-500" />
+              <span>Admin Portal</span>
+            </Link>
+          </div>
+
+          {/* Collapsible Testing Credentials Guide (Without Impersonation) */}
+          <div className="mt-4 pt-3 border-t border-slate-800/40">
+            <button
+              type="button"
+              onClick={() => setShowDemoCredentials(!showDemoCredentials)}
+              className="w-full flex items-center justify-between text-[11px] text-slate-500 hover:text-slate-400 py-1"
+            >
+              <span className="flex items-center gap-1">
+                <Info className="w-3 h-3 text-slate-400" />
+                Staff Test Credentials Guide
               </span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {(Object.keys(MOCK_USERS) as UserRole[]).map((r) => {
-                const cfg = ROLE_CONFIGS[r];
-                return (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => handleFastRoleSelect(r)}
-                    className="p-2 text-left rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 transition-colors"
-                  >
-                    <span className="text-xs font-semibold text-slate-200 block truncate">
-                      {cfg.label}
-                    </span>
-                    <span className="text-[10px] text-slate-500 block truncate">
-                      {r.replace('_', ' ')}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+              <span>{showDemoCredentials ? '▲ Hide' : '▼ View'}</span>
+            </button>
+
+            {showDemoCredentials && (
+              <div className="mt-2 p-2.5 rounded-lg bg-slate-950/60 border border-slate-800 text-[11px] space-y-1 text-slate-400">
+                <p><strong className="text-slate-300">Sales:</strong> sales@sunpowersolutions.in (Password@123)</p>
+                <p><strong className="text-slate-300">Technician:</strong> tech@sunpowersolutions.in (Password@123)</p>
+                <p><strong className="text-slate-300">Warehouse:</strong> warehouse@sunpowersolutions.in (Password@123)</p>
+                <p><strong className="text-slate-300">Support:</strong> support@sunpowersolutions.in (Password@123)</p>
+                <p><strong className="text-slate-300">Director:</strong> director@sunpowersolutions.in (Password@123)</p>
+              </div>
+            )}
           </div>
         </Card>
       </div>

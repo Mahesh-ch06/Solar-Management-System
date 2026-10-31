@@ -15,6 +15,7 @@ import {
   installationJobs,
   serviceTickets,
   inventoryItems,
+  users,
 } from '../../store/inMemoryDb';
 
 const iconMap: Record<string, LucideIcon> = {
@@ -37,6 +38,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const location = useLocation();
 
   const isRoleAllowed = (item: NavItem): boolean => {
+    if (!user) return false;
     if (!item.allowedRoles) return true;
     return item.allowedRoles.includes(user.role);
   };
@@ -65,6 +67,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       case 'inventory': {
         const low = inventoryItems.filter((i) => i.currentStock <= i.lowStockThreshold).length;
         return low > 0 ? { text: `${low} Low`, variant: 'rose' } : null;
+      }
+      case 'user-management': {
+        const pending = users.filter((u) => u.status === 'PENDING_APPROVAL').length;
+        return pending > 0 ? { text: `${pending} Review`, variant: 'amber' } : null;
       }
       default:
         return null;

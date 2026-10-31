@@ -133,4 +133,17 @@ export const NAVIGATION_GROUPS: NavGroup[] = [
       },
     ],
   },
+  {
+    id: 'administration',
+    title: 'System Administration',
+    items: [
+      {
+        id: 'user-management',
+        label: 'User Management & RBAC',
+        path: '/admin/users',
+        iconName: 'ShieldCheck',
+        allowedRoles: ['ADMIN'],
+      },
+    ],
+  },
 ];
