@@ -24,7 +24,7 @@ export const NAVIGATION_GROUPS: NavGroup[] = [
       {
         id: 'dashboard',
         label: 'Dashboard',
-        path: '/',
+        path: '/dashboard',
         iconName: 'LayoutDashboard',
       },
     ],

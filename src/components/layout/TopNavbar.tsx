@@ -8,6 +8,7 @@ import {
   User as UserIcon,
   LogOut,
   Shield,
+  ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { ROLE_CONFIGS } from '../../constants/roles';
@@ -69,6 +70,18 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileMenu }) => {
 
       {/* Right: Notifications & Verified User Profile */}
       <div className="flex items-center gap-3">
+        {/* Public Website Link */}
+        <a
+          href="/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
+          title="Open Public Customer Website"
+        >
+          <ExternalLink className="w-3.5 h-3.5 text-solar-700" />
+          <span>View Website</span>
+        </a>
+
         {/* Role Badge Indicator */}
         <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-slate-200 bg-slate-50 text-slate-700 text-xs font-semibold">
           <Shield className="w-3.5 h-3.5 text-solar-700" />

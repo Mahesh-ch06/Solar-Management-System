@@ -1,0 +1,293 @@
+import React, { useState } from 'react';
+import { Card } from '../../../components/ui/Card';
+import { Button } from '../../../components/ui/Button';
+import { Input } from '../../../components/ui/Input';
+import { Select } from '../../../components/ui/Select';
+import { useToast } from '../../../context/ToastContext';
+import { addCustomer } from '../../../store/inMemoryDb';
+import { Customer } from '../../../types/customer';
+import {
+  Send,
+  CheckCircle2,
+  PhoneCall,
+  Calendar,
+  ShieldCheck,
+  Building2,
+  FileCheck2,
+  ArrowRight,
+} from 'lucide-react';
+
+export const LeadCaptureForm: React.FC = () => {
+  const { showToast } = useToast();
+
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [city, setCity] = useState('Gurugram');
+  const [pincode, setPincode] = useState('');
+  const [address, setAddress] = useState('');
+  const [monthlyBill, setMonthlyBill] = useState('4500');
+  const [requiredCapacityKW, setRequiredCapacityKW] = useState('3');
+  const [systemType, setSystemType] = useState<'ON_GRID' | 'OFF_GRID'>('ON_GRID');
+  const [subsidyRequired, setSubsidyRequired] = useState(true);
+  const [notes, setNotes] = useState('');
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittedLead, setSubmittedLead] = useState<Customer | null>(null);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!name.trim() || !phone.trim() || !city.trim()) {
+      showToast('Missing Details', 'Please enter your name, mobile number, and city.', 'error');
+      return;
+    }
+
+    if (phone.trim().length < 10) {
+      showToast('Invalid Phone', 'Please provide a valid 10-digit mobile number.', 'error');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const now = new Date().toISOString();
+      const newCustomer: Customer = {
+        id: `cust-${Date.now()}`,
+        name: name.trim(),
+        phone: phone.trim(),
+        email: email.trim() || `${phone.trim()}@sunpower.customer`,
+        address: address.trim() || `${city}, North India`,
+        city: city.trim(),
+        pincode: pincode.trim() || '110001',
+        monthlyBill: Number(monthlyBill) || 4500,
+        requiredCapacityKW: Number(requiredCapacityKW) || 3,
+        systemType,
+        subsidyRequired,
+        enquirySource: 'WEB_FORM',
+        status: 'NEW',
+        assignedTo: 'Vikram Mehta',
+        notes: notes.trim() || 'Website inquiry for PM Surya Ghar rooftop solar installation.',
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      addCustomer(newCustomer);
+      setSubmittedLead(newCustomer);
+      showToast('Inquiry Received', 'Your solar rooftop inquiry has been logged successfully.', 'success');
+    } catch {
+      showToast('Error', 'Unable to submit your inquiry. Please try again.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const resetForm = () => {
+    setName('');
+    setPhone('');
+    setEmail('');
+    setPincode('');
+    setAddress('');
+    setNotes('');
+    setSubmittedLead(null);
+  };
+
+  return (
+    <Card className="bg-slate-900 border-slate-800 text-white p-6 sm:p-8 rounded-2xl shadow-xl">
+      {submittedLead ? (
+        <div className="text-center py-6 space-y-4">
+          <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mx-auto">
+            <CheckCircle2 className="w-10 h-10" />
+          </div>
+
+          <h3 className="text-xl font-bold text-white">Rooftop Survey Request Confirmed!</h3>
+          <p className="text-xs sm:text-sm text-slate-300 max-w-md mx-auto leading-relaxed">
+            Thank you, <strong className="text-white">{submittedLead.name}</strong>. Your solar application has been recorded in our central system.
+          </p>
+
+          <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 max-w-sm mx-auto text-left space-y-2 text-xs">
+            <div className="flex justify-between text-slate-400">
+              <span>Application Reference:</span>
+              <span className="font-mono font-bold text-amber-400">{submittedLead.id}</span>
+            </div>
+            <div className="flex justify-between text-slate-400">
+              <span>System Requested:</span>
+              <span className="font-semibold text-white">{submittedLead.requiredCapacityKW} kW ({submittedLead.systemType === 'ON_GRID' ? 'On-Grid' : 'Hybrid'})</span>
+            </div>
+            <div className="flex justify-between text-slate-400">
+              <span>Subsidy Guidance:</span>
+              <span className="font-semibold text-emerald-400">PM Surya Ghar (Included)</span>
+            </div>
+          </div>
+
+          <div className="max-w-md mx-auto p-4 rounded-lg bg-solar-950/40 border border-solar-500/20 text-xs text-slate-300 text-left space-y-2">
+            <p className="font-semibold text-solar-300 flex items-center gap-1.5">
+              <PhoneCall className="w-4 h-4 text-solar-400" />
+              What Happens Next:
+            </p>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              1. Our rooftop design engineer will contact you at <strong className="text-slate-200">{submittedLead.phone}</strong> to confirm your address and schedule the 3D shadow analysis.
+            </p>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              2. We will generate your customized Bill of Materials (BOM) and file your pre-registration on the National Portal for the PM Surya Ghar subsidy.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+            <a
+              href={`/portal?phone=${encodeURIComponent(submittedLead.phone)}`}
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg bg-solar-600 hover:bg-solar-500 text-white text-xs font-bold transition-colors"
+            >
+              <span>Track Application on Customer Portal</span>
+              <ArrowRight className="w-4 h-4" />
+            </a>
+
+            <Button variant="outline" size="sm" onClick={resetForm} className="border-slate-700 text-slate-300">
+              Submit Another Inquiry
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="flex items-center gap-2 mb-2 pb-3 border-b border-slate-800">
+            <Building2 className="w-5 h-5 text-solar-400" />
+            <div>
+              <h3 className="text-base font-bold text-white">Book Free Rooftop Site Survey</h3>
+              <p className="text-[11px] text-slate-400">
+                Get an engineer site visit, 3D shadow analysis, and official PM Surya Ghar subsidy paperwork.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Full Name *"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Suresh Bansal"
+              required
+            />
+
+            <Input
+              label="Mobile Number (WhatsApp) *"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+              placeholder="10-digit mobile number"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Input
+              label="Email Address (Optional)"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="e.g. suresh@gmail.com"
+            />
+
+            <Select
+              label="City / District *"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              options={[
+                { value: 'Gurugram', label: 'Gurugram (DHBVN)' },
+                { value: 'Delhi', label: 'Delhi (BSES / Tata Power)' },
+                { value: 'Noida', label: 'Noida (NPCL / PVVNL)' },
+                { value: 'Faridabad', label: 'Faridabad (DHBVN)' },
+                { value: 'Ghaziabad', label: 'Ghaziabad (PVVNL)' },
+                { value: 'Other', label: 'Other North India Location' },
+              ]}
+            />
+
+            <Input
+              label="Area PIN Code"
+              value={pincode}
+              onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              placeholder="e.g. 122001"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Select
+              label="Avg. Monthly Electricity Bill"
+              value={monthlyBill}
+              onChange={(e) => setMonthlyBill(e.target.value)}
+              options={[
+                { value: '2500', label: '₹1,500 – ₹3,000 / month' },
+                { value: '4500', label: '₹3,000 – ₹6,000 / month' },
+                { value: '8000', label: '₹6,000 – ₹10,000 / month' },
+                { value: '15000', label: '₹10,000+ / month (Commercial / Villa)' },
+              ]}
+            />
+
+            <Select
+              label="Recommended System Capacity"
+              value={requiredCapacityKW}
+              onChange={(e) => setRequiredCapacityKW(e.target.value)}
+              options={[
+                { value: '2', label: '2 kW (Saves ~₹1,800/mo, ₹60k Subsidy)' },
+                { value: '3', label: '3 kW (Saves ~₹2,700/mo, ₹78k Subsidy)' },
+                { value: '4', label: '4 kW (Saves ~₹3,600/mo, ₹78k Subsidy)' },
+                { value: '5', label: '5 kW (Saves ~₹4,500/mo, ₹78k Subsidy)' },
+                { value: '10', label: '10 kW (Commercial / Large Villa)' },
+              ]}
+            />
+
+            <Select
+              label="Solar System Type"
+              value={systemType}
+              onChange={(e) => setSystemType(e.target.value as 'ON_GRID' | 'OFF_GRID')}
+              options={[
+                { value: 'ON_GRID', label: 'Grid-Tied (Max Subsidy & Net-Meter)' },
+                { value: 'OFF_GRID', label: 'Hybrid with Battery Storage (24x7 Backup)' },
+              ]}
+            />
+          </div>
+
+          <div className="flex items-center gap-2 pt-1 pb-1">
+            <input
+              type="checkbox"
+              id="subsidy-check"
+              checked={subsidyRequired}
+              onChange={(e) => setSubsidyRequired(e.target.checked)}
+              className="rounded border-slate-700 bg-slate-800 text-solar-500 focus:ring-solar-500"
+            />
+            <label htmlFor="subsidy-check" className="text-xs text-slate-300 cursor-pointer">
+              Apply for <strong>PM Surya Ghar Central Govt. Subsidy</strong> (Up to ₹78,000 direct bank transfer assistance).
+            </label>
+          </div>
+
+          <div className="pt-2">
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              className="w-full bg-solar-600 hover:bg-solar-500 font-bold text-sm shadow-lg hover:shadow-solar-500/25"
+              isLoading={isSubmitting}
+              leftIcon={<Send className="w-4 h-4" />}
+            >
+              Confirm Free Rooftop Site Visit & Subsidy Check
+            </Button>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-4 text-[11px] text-slate-400 pt-2 border-t border-slate-800/60">
+            <span className="flex items-center gap-1">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              100% Free Site Inspection
+            </span>
+            <span className="flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5 text-solar-400" />
+              Visit within 24-48 Hours
+            </span>
+            <span className="flex items-center gap-1">
+              <FileCheck2 className="w-3.5 h-3.5 text-amber-400" />
+              Zero-Paperwork Subsidy Handling
+            </span>
+          </div>
+        </form>
+      )}
+    </Card>
+  );
+};

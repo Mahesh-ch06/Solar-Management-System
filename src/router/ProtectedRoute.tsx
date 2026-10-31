@@ -18,7 +18,7 @@ export function getDefaultRouteForRole(role: UserRole): string {
   switch (role) {
     case 'ADMIN':
     case 'DIRECTOR':
-      return '/';
+      return '/dashboard';
     case 'SALES':
       return '/customers';
     case 'TECHNICIAN':
@@ -28,7 +28,7 @@ export function getDefaultRouteForRole(role: UserRole): string {
     case 'SUPPORT_AGENT':
       return '/service-tickets';
     default:
-      return '/';
+      return '/dashboard';
   }
 }
 

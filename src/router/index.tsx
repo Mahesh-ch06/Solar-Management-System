@@ -1,6 +1,9 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AppShell } from '../components/layout/AppShell';
 import { ProtectedRoute } from './ProtectedRoute';
+import { HomePage } from '../features/public/HomePage';
+import { CustomerPortalPage } from '../features/public/CustomerPortalPage';
+import { CustomerAuthPage } from '../features/public/CustomerAuthPage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { AdminLoginPage } from '../features/auth/AdminLoginPage';
 import { RegisterPage } from '../features/auth/RegisterPage';
@@ -19,7 +22,34 @@ import { UserManagementPage } from '../features/admin/UserManagementPage';
 import { RouteErrorBoundary } from '../components/common/RouteErrorBoundary';
 
 export const router = createBrowserRouter([
-  // Public Authentication Portals
+  // Public Customer Facing Website & Portal
+  {
+    path: '/',
+    element: <HomePage />,
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: '/portal',
+    element: <CustomerPortalPage />,
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: '/portal/login',
+    element: <CustomerAuthPage />,
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: '/customer/login',
+    element: <CustomerAuthPage />,
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: '/customer/register',
+    element: <CustomerAuthPage />,
+    errorElement: <RouteErrorBoundary />,
+  },
+
+  // Staff & Enterprise Authentication Portals
   {
     path: '/login',
     element: <LoginPage />,
@@ -36,9 +66,8 @@ export const router = createBrowserRouter([
     errorElement: <RouteErrorBoundary />,
   },
 
-  // Authenticated Enterprise Application Shell
+  // Authenticated Enterprise ERP Shell
   {
-    path: '/',
     element: (
       <ProtectedRoute>
         <AppShell />
@@ -47,7 +76,7 @@ export const router = createBrowserRouter([
     errorElement: <RouteErrorBoundary />,
     children: [
       {
-        index: true,
+        path: '/dashboard',
         element: (
           <ProtectedRoute>
             <DashboardPage />
@@ -55,7 +84,11 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'customers',
+        path: '/erp',
+        element: <Navigate to="/dashboard" replace />,
+      },
+      {
+        path: '/customers',
         element: (
           <ProtectedRoute allowedRoles={['ADMIN', 'SALES', 'DIRECTOR']}>
             <CustomersPage />

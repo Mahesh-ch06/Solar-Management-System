@@ -46,6 +46,22 @@ export const AdminLoginPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative selection:bg-solar-500 selection:text-white">
+      {/* Top Website Links */}
+      <div className="sm:mx-auto sm:w-full sm:max-w-md mb-6 flex items-center justify-between z-10">
+        <Link
+          to="/"
+          className="text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+        >
+          &larr; Back to Website
+        </Link>
+        <Link
+          to="/login"
+          className="text-xs font-semibold text-purple-400 hover:text-purple-300 transition-colors"
+        >
+          Staff Login &rarr;
+        </Link>
+      </div>
+
       {/* Brand & Security Header */}
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-purple-950 text-purple-400 mb-3 shadow-lg border border-purple-800">

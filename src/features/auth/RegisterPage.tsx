@@ -76,6 +76,22 @@ export const RegisterPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative selection:bg-solar-500 selection:text-white">
+      {/* Top Website Links */}
+      <div className="sm:mx-auto sm:w-full sm:max-w-md mb-6 flex items-center justify-between z-10">
+        <Link
+          to="/"
+          className="text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+        >
+          &larr; Back to Website
+        </Link>
+        <Link
+          to="/login"
+          className="text-xs font-semibold text-solar-400 hover:text-solar-300 transition-colors"
+        >
+          Staff Sign In &rarr;
+        </Link>
+      </div>
+
       {/* Brand Header */}
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-solar-800 text-amber-400 mb-3 shadow-md border border-solar-700">
