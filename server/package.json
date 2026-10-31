@@ -9,7 +9,8 @@
     "dev": "nodemon src/server.js",
     "seed": "node src/db/seed.js",
     "test": "node --test --test-concurrency=1 tests/**/*.test.js",
-    "test:member3": "node test-member3.js"
+    "test:member3": "node test-member3.js",
+    "test:member4": "node --test tests/member4.test.js"
   },
   "keywords": [
     "solar",
