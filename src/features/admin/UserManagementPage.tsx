@@ -20,6 +20,7 @@ import { Select } from '../../components/ui/Select';
 import { Textarea } from '../../components/ui/Textarea';
 import { SearchInput } from '../../components/ui/FormControls';
 import { useToast } from '../../context/ToastContext';
+import { apiClient, USE_MOCK_DATA } from '../../api/apiClient';
 import {
   ShieldCheck,
   UserCheck,
@@ -51,10 +52,27 @@ export const UserManagementPage: React.FC = () => {
   // Audit History Modal state
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
 
-  const refreshData = () => {
+  const refreshData = async () => {
+    if (!USE_MOCK_DATA) {
+      try {
+        const [usersRes, auditRes] = await Promise.all([
+          apiClient.get<{ success: boolean; data: UserAccount[] }>('/admin/users'),
+          apiClient.get<{ success: boolean; data: RoleAuditEntry[] }>('/admin/audit-logs'),
+        ]);
+        if (usersRes.data?.data) setUserList(usersRes.data.data);
+        if (auditRes.data?.data) setAuditLogs(auditRes.data.data);
+        return;
+      } catch (err) {
+        console.warn('[UserManagement] API refresh failed, using local store:', err);
+      }
+    }
     setUserList(getUsers());
     setAuditLogs(getRoleAuditLogs());
   };
+
+  React.useEffect(() => {
+    refreshData();
+  }, []);
 
   const filteredUsers = userList.filter((u) => {
     const matchesSearch =
@@ -87,6 +105,20 @@ export const UserManagementPage: React.FC = () => {
     try {
       setIsSubmittingRole(true);
       const oldRole = selectedUserForRole.role;
+
+      if (!USE_MOCK_DATA) {
+        try {
+          await apiClient.patch(`/admin/users/${selectedUserForRole.id}/role`, {
+            role: newSelectedRole,
+            reason: changeReason.trim(),
+          });
+          if (selectedUserForRole.status === 'PENDING_APPROVAL') {
+            await apiClient.patch(`/admin/users/${selectedUserForRole.id}/status`, { status: 'ACTIVE' });
+          }
+        } catch (apiErr) {
+          console.warn('[UserManagement] API role update failed, using local store:', apiErr);
+        }
+      }
 
       // 1. Update in database
       updateUserRole(
@@ -128,8 +160,15 @@ export const UserManagementPage: React.FC = () => {
     }
   };
 
-  const handleStatusToggle = (targetUser: UserAccount, newStatus: 'ACTIVE' | 'SUSPENDED') => {
+  const handleStatusToggle = async (targetUser: UserAccount, newStatus: 'ACTIVE' | 'SUSPENDED') => {
     try {
+      if (!USE_MOCK_DATA) {
+        try {
+          await apiClient.patch(`/admin/users/${targetUser.id}/status`, { status: newStatus });
+        } catch (apiErr) {
+          console.warn('[UserManagement] API status update failed, using local store:', apiErr);
+        }
+      }
       updateUserStatus(targetUser.id, newStatus);
       refreshData();
       showToast(

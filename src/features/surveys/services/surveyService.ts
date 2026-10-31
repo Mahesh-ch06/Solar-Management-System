@@ -7,8 +7,9 @@ import {
   updateCustomer as dbUpdateCustomer,
 } from '../../../store/inMemoryDb';
 import { SurveyFormData } from '../../../utils/validators';
+import { apiClient, USE_MOCK_DATA } from '../../../api/apiClient';
 
-const SIMULATED_DELAY_MS = 350;
+const SIMULATED_DELAY_MS = 150;
 
 const delay = (ms: number = SIMULATED_DELAY_MS) =>
   new Promise((resolve) => setTimeout(resolve, ms));
@@ -22,9 +23,19 @@ export interface CreateSurveyPayload extends SurveyFormData {
 
 export const surveyService = {
   /**
-   * Fetches all surveys from in-memory store
+   * Fetches all surveys
    */
   async getSurveys(): Promise<Survey[]> {
+    if (!USE_MOCK_DATA) {
+      try {
+        const res = await apiClient.get<{ success: boolean; data: Survey[] }>('/surveys');
+        if (res.data?.success && Array.isArray(res.data.data)) {
+          return res.data.data;
+        }
+      } catch (err) {
+        console.warn('[surveyService] API getSurveys failed, falling back to local store:', err);
+      }
+    }
     await delay();
     return [...surveys];
   },
@@ -33,6 +44,16 @@ export const surveyService = {
    * Fetches a single survey by ID
    */
   async getSurveyById(id: string): Promise<Survey | undefined> {
+    if (!USE_MOCK_DATA) {
+      try {
+        const res = await apiClient.get<{ success: boolean; data: Survey }>(`/surveys/${id}`);
+        if (res.data?.success && res.data.data) {
+          return res.data.data;
+        }
+      } catch (err) {
+        console.warn('[surveyService] API getSurveyById failed, falling back to local store:', err);
+      }
+    }
     await delay();
     return surveys.find((s) => s.id === id);
   },
@@ -41,6 +62,16 @@ export const surveyService = {
    * Fetches surveys associated with a specific customer
    */
   async getSurveysByCustomerId(customerId: string): Promise<Survey[]> {
+    if (!USE_MOCK_DATA) {
+      try {
+        const res = await apiClient.get<{ success: boolean; data: Survey[] }>(`/surveys/customer/${customerId}`);
+        if (res.data?.success && Array.isArray(res.data.data)) {
+          return res.data.data;
+        }
+      } catch (err) {
+        console.warn('[surveyService] API getSurveysByCustomerId failed, falling back to local store:', err);
+      }
+    }
     await delay();
     return surveys.filter((s) => s.customerId === customerId);
   },
@@ -49,9 +80,19 @@ export const surveyService = {
    * Creates a new survey and updates customer enquiry status to SURVEY_SCHEDULED
    */
   async addSurvey(data: CreateSurveyPayload): Promise<Survey> {
+    if (!USE_MOCK_DATA) {
+      try {
+        const res = await apiClient.post<{ success: boolean; data: Survey }>('/surveys', data);
+        if (res.data?.success && res.data.data) {
+          return res.data.data;
+        }
+      } catch (err) {
+        console.warn('[surveyService] API addSurvey failed, falling back to local store:', err);
+      }
+    }
+
     await delay();
 
-    // Look up customer details if not directly supplied
     const targetCustomer = customers.find((c) => c.id === data.customerId);
     const customerName = data.customerName || targetCustomer?.name || 'Unknown Customer';
     const address = data.address || (targetCustomer ? `${targetCustomer.address}, ${targetCustomer.city}` : 'Site Address');
@@ -78,67 +119,46 @@ export const surveyService = {
       structureFeasible: Boolean(data.structureFeasible),
       recommendedCapacityKW: Number(data.recommendedCapacityKW),
       surveyNotes: data.surveyNotes || '',
+      obstaclesIdentified: data.obstaclesIdentified || '',
       createdAt: now,
       updatedAt: now,
     };
 
     dbAddSurvey(newSurvey);
-
-    // Automatically transition customer to SURVEY_SCHEDULED if currently NEW/CONTACTED
-    if (targetCustomer && (targetCustomer.status === 'NEW' || targetCustomer.status === 'CONTACTED')) {
-      try {
-        dbUpdateCustomer(targetCustomer.id, { status: 'SURVEY_SCHEDULED' });
-      } catch {
-        // Safe ignore
-      }
-    }
+    dbUpdateCustomer(data.customerId, { status: 'SURVEY_SCHEDULED' });
 
     return newSurvey;
   },
 
   /**
-   * Approves, rejects, or updates the status of a survey with engineer notes
+   * Updates an existing survey record
    */
-  async updateSurveyStatus(
-    id: string,
-    status: SurveyStatus,
-    notes?: string
-  ): Promise<Survey> {
-    await delay();
-
-    const patch: Partial<Survey> = {
-      status,
-    };
-
-    const todayDate = new Date().toISOString().split('T')[0];
-
-    if (status === 'APPROVED') {
-      patch.approvedBy = 'Vikram Mehta (Chief Engineer)';
-      patch.approvalNotes = notes || 'Technical roof assessment verified and approved.';
-      patch.completedDate = patch.completedDate || todayDate;
-    } else if (status === 'REJECTED') {
-      patch.rejectionReason = notes || 'Site does not meet structural or solar radiation criteria.';
-    } else if (status === 'COMPLETED') {
-      patch.completedDate = todayDate;
-      if (notes) {
-        patch.surveyNotes = notes;
-      }
-    }
-
-    const updated = dbUpdateSurvey(id, patch);
-    if (!updated) {
-      throw new Error(`Survey with id ${id} not found`);
-    }
-
-    // If approved, update customer enquiry status to SURVEY_DONE
-    if (status === 'APPROVED' && updated.customerId) {
+  async updateSurvey(id: string, updates: Partial<Survey>): Promise<Survey | undefined> {
+    if (!USE_MOCK_DATA) {
       try {
-        dbUpdateCustomer(updated.customerId, { status: 'SURVEY_DONE' });
-      } catch {
-        // Safe ignore
+        if (updates.status && ['APPROVED', 'REJECTED'].includes(updates.status)) {
+          const res = await apiClient.patch<{ success: boolean; data: Survey }>(`/surveys/${id}/feasibility`, {
+            feasibilityStatus: updates.status,
+            rejectionReason: updates.rejectionReason,
+            remarks: updates.surveyNotes,
+          });
+          if (res.data?.success && res.data.data) {
+            return res.data.data;
+          }
+        }
+      } catch (err) {
+        console.warn('[surveyService] API updateSurvey failed, falling back to local store:', err);
       }
     }
 
-    return updated;
+    await delay();
+    return dbUpdateSurvey(id, updates);
+  },
+
+  /**
+   * Approves or rejects a survey
+   */
+  async updateSurveyStatus(id: string, status: SurveyStatus, rejectionReason?: string): Promise<Survey | undefined> {
+    return this.updateSurvey(id, { status, rejectionReason });
   },
 };

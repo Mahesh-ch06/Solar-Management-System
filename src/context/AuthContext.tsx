@@ -6,6 +6,7 @@ import {
   users,
 } from '../store/inMemoryDb';
 import { emailService } from '../services/emailService';
+import { apiClient, USE_MOCK_DATA } from '../api/apiClient';
 
 interface AuthContextValue {
   user: UserAccount | null;
@@ -19,6 +20,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const AUTH_STORAGE_KEY = 'sunpower_auth_session_v3';
+const TOKEN_KEY = 'sunpower_auth_token';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
@@ -26,34 +28,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Restore authenticated session from localStorage on initialization
   useEffect(() => {
-    try {
-      localStorage.removeItem('sunpower_auth_session');
-      localStorage.removeItem('sunpower_auth_session_v2');
+    async function initSession() {
+      try {
+        localStorage.removeItem('sunpower_auth_session');
+        localStorage.removeItem('sunpower_auth_session_v2');
 
-      const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-      if (stored) {
-        const parsed: UserAccount = JSON.parse(stored);
-        // Verify user still exists and is ACTIVE in database
-        const freshUser = users.find((u) => u.id === parsed.id);
-        if (freshUser && freshUser.status === 'ACTIVE') {
-          setCurrentUser(freshUser);
+        const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+        const token = localStorage.getItem(TOKEN_KEY);
+
+        if (!USE_MOCK_DATA && token) {
+          try {
+            const res = await apiClient.get<{ success: boolean; user: UserAccount }>('/auth/me');
+            if (res.data?.success && res.data.user) {
+              setCurrentUser(res.data.user);
+              setIsLoading(false);
+              return;
+            }
+          } catch (apiErr) {
+            console.warn('[AuthProvider] Failed to verify backend token, falling back to local session');
+          }
+        }
+
+        if (stored) {
+          const parsed: UserAccount = JSON.parse(stored);
+          const freshUser = users.find((u) => u.id === parsed.id);
+          if (freshUser && freshUser.status === 'ACTIVE') {
+            setCurrentUser(freshUser);
+          } else {
+            localStorage.removeItem(AUTH_STORAGE_KEY);
+            localStorage.removeItem(TOKEN_KEY);
+            setCurrentUser(null);
+          }
         } else {
-          localStorage.removeItem(AUTH_STORAGE_KEY);
           setCurrentUser(null);
         }
-      } else {
+      } catch (e) {
+        console.warn('[AuthProvider] Failed to parse auth session:', e);
         setCurrentUser(null);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (e) {
-      console.warn('[AuthProvider] Failed to parse auth session:', e);
-      setCurrentUser(null);
-    } finally {
-      setIsLoading(false);
     }
+
+    initSession();
   }, []);
 
   /**
-   * Genuine login verification against database user accounts
+   * Login verification against backend API (with fallback to client store)
    */
   const login = async (
     credentials: LoginFormData,
@@ -61,6 +82,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   ): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
     try {
+      if (!USE_MOCK_DATA) {
+        try {
+          const endpoint = isAdminPortal ? '/auth/admin-login' : '/auth/login';
+          const res = await apiClient.post<{ success: boolean; token?: string; user?: UserAccount; error?: string }>(
+            endpoint,
+            credentials
+          );
+
+          if (res.data.success && res.data.user) {
+            if (res.data.token) {
+              localStorage.setItem(TOKEN_KEY, res.data.token);
+            }
+            setCurrentUser(res.data.user);
+            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(res.data.user));
+            return { success: true };
+          } else if (res.data.error) {
+            return { success: false, error: res.data.error };
+          }
+        } catch (apiErr: any) {
+          const backendError = apiErr?.response?.data?.error;
+          if (backendError) {
+            return { success: false, error: backendError };
+          }
+          console.warn('[AuthProvider] Backend API login failed, checking local store:', apiErr);
+        }
+      }
+
+      // Local fallback verification
       const user = getUserByEmail(credentials.email);
 
       if (!user) {
@@ -85,7 +134,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       }
 
-      // Security enforcement for Admin Portal
       if (isAdminPortal && user.role !== 'ADMIN') {
         return {
           success: false,
@@ -93,7 +141,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       }
 
-      // Successful login
       setCurrentUser(user);
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
       return { success: true };
@@ -103,30 +150,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   /**
-   * Public staff registration (prevents privileged role assignment)
+   * Public staff registration
    */
   const register = async (
     data: RegisterFormData
   ): Promise<{ success: boolean; error?: string; message?: string; isInitialAdmin?: boolean }> => {
     setIsLoading(true);
     try {
+      if (!USE_MOCK_DATA) {
+        try {
+          const res = await apiClient.post<{ success: boolean; message?: string; error?: string; isInitialAdmin?: boolean }>(
+            '/auth/register',
+            data
+          );
+          if (res.data.success) {
+            return {
+              success: true,
+              isInitialAdmin: Boolean(res.data.isInitialAdmin),
+              message: res.data.message || 'Registration submitted successfully!',
+            };
+          }
+        } catch (apiErr: any) {
+          const backendError = apiErr?.response?.data?.error;
+          if (backendError) {
+            return { success: false, error: backendError };
+          }
+          console.warn('[AuthProvider] Backend register API failed, falling back to local store:', apiErr);
+        }
+      }
+
       const existing = getUserByEmail(data.email);
       if (existing) {
         return { success: false, error: 'An account with this email address already exists.' };
       }
 
-      // Newly registered users are created with PENDING_APPROVAL status and cannot self-assign ADMIN/DIRECTOR
       const newUser = createUserAccount({
         name: data.name.trim(),
         email: data.email.trim().toLowerCase(),
         password: data.password,
         phone: data.phone.trim(),
         department: data.department?.trim() || 'Field / Commercial Operations',
-        role: 'SALES', // Base entry role pending admin assignment
+        role: 'SALES',
         status: 'PENDING_APPROVAL',
       });
 
-      // Dispatch EmailJS alert to system administrator
       const adminUser = users.find((u) => u.role === 'ADMIN');
       if (adminUser) {
         emailService.notifyAdminNewRegistration(
@@ -157,6 +224,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setCurrentUser(null);
     localStorage.removeItem(AUTH_STORAGE_KEY);
+    localStorage.removeItem(TOKEN_KEY);
   };
 
   return (
