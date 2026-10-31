@@ -12,6 +12,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Edit2,
+  Trash2,
+  Sparkles,
 } from 'lucide-react';
 import { Customer, EnquiryStatus } from '../../types/customer';
 import { customerService } from './services/customerService';
@@ -68,6 +70,17 @@ const FILTER_PILLS: Array<{ id: 'ALL' | EnquiryStatus; label: string }> = [
   { id: 'CLOSED_LOST', label: 'Closed Lost' },
 ];
 
+const ASSIGNED_STAFF_OPTIONS = [
+  'Vikram Mehta',
+  'Rajesh Sharma',
+  'Mahesh Ch',
+  'Priya Kapoor',
+  'Rohit Gupta',
+  'Pooja Nair',
+  'Manoj Kumar',
+  'Nikhil',
+];
+
 const ITEMS_PER_PAGE = 10;
 
 export const CustomersPage: React.FC = () => {
@@ -108,6 +121,66 @@ export const CustomersPage: React.FC = () => {
     onError: (err: unknown) => {
       const msg = err instanceof Error ? err.message : 'Failed to update status';
       showToast('Error Updating Status', msg, 'error');
+    },
+  });
+
+  // Mutation for inline assignedTo change
+  const assignMutation = useMutation({
+    mutationFn: ({ id, assignedTo }: { id: string; assignedTo: string }) =>
+      customerService.updateCustomer(id, { assignedTo }),
+    onSuccess: (updated) => {
+      if (updated) {
+        showToast(
+          'Assigned Staff Updated',
+          `${updated.name} reassigned to ${updated.assignedTo}.`,
+          'success'
+        );
+      } else {
+        showToast('Assigned Staff Updated', 'Customer assignment saved.', 'success');
+      }
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+    },
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : 'Failed to reassign customer';
+      showToast('Reassignment Failed', msg, 'error');
+    },
+  });
+
+  // Mutation for deleting customer
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => customerService.deleteCustomer(id),
+    onSuccess: () => {
+      showToast('Customer Removed', 'Customer record was successfully deleted.', 'info');
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+    },
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : 'Could not delete customer record.';
+      showToast('Delete Failed', msg, 'error');
+    },
+  });
+
+  // Mutation for deduplicating customers & removing mock data
+  const deduplicateMutation = useMutation({
+    mutationFn: () => customerService.deleteDuplicateCustomers(),
+    onSuccess: (removedCount) => {
+      if (removedCount > 0) {
+        showToast(
+          'Pipeline Cleaned',
+          `Removed ${removedCount} mock / duplicate customer record(s).`,
+          'success'
+        );
+      } else {
+        showToast(
+          'Pipeline Clean',
+          'No duplicate phone numbers or mock records found.',
+          'info'
+        );
+      }
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+    },
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : 'Failed to clean duplicates.';
+      showToast('Cleaning Error', msg, 'error');
     },
   });
 
@@ -185,7 +258,21 @@ export const CustomersPage: React.FC = () => {
             Manage solar customer discovery, energy consumption bills, DISCOM subsidies, and deal progression.
           </p>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0">
+          <Button
+            variant="outline"
+            leftIcon={<Sparkles className="w-4 h-4 text-amber-500" />}
+            onClick={() => {
+              if (window.confirm('Clean all duplicate phone entries and purge mock test records?')) {
+                deduplicateMutation.mutate();
+              }
+            }}
+            isLoading={deduplicateMutation.isPending}
+            title="Deduplicate customer phone numbers and purge mock test records"
+            className="border-slate-300 text-slate-700 hover:bg-slate-50"
+          >
+            Clean Duplicates
+          </Button>
           <Button
             variant="primary"
             leftIcon={<UserPlus className="w-4 h-4" />}
@@ -442,8 +529,8 @@ export const CustomersPage: React.FC = () => {
                   <TableHead className="w-[180px]">System Profile</TableHead>
                   <TableHead className="w-[130px]">Monthly Bill</TableHead>
                   <TableHead className="w-[160px]">Status</TableHead>
-                  <TableHead className="w-[160px]">Assigned To</TableHead>
-                  <TableHead className="text-right w-[160px]">Actions</TableHead>
+                  <TableHead className="w-[170px]">Assigned To</TableHead>
+                  <TableHead className="text-right w-[190px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -510,11 +597,34 @@ export const CustomersPage: React.FC = () => {
                         </Badge>
                       </TableCell>
 
-                      {/* Assigned To */}
+                      {/* Assigned To - Interactive Reassignment */}
                       <TableCell>
-                        <span className="text-xs font-medium text-slate-700 bg-slate-100 px-2 py-1 rounded-md">
-                          {cust.assignedTo}
-                        </span>
+                        <div className="relative inline-block w-full max-w-[155px]">
+                          <select
+                            value={cust.assignedTo || 'Vikram Mehta'}
+                            onChange={(e) =>
+                              assignMutation.mutate({
+                                id: cust.id,
+                                assignedTo: e.target.value,
+                              })
+                            }
+                            disabled={assignMutation.isPending}
+                            title="Reassign to sales engineer or staff"
+                            className="w-full text-xs font-medium text-slate-800 bg-white hover:bg-amber-50/50 border border-slate-300 hover:border-amber-400 rounded-md py-1.5 pl-2.5 pr-6 appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-amber-500 shadow-xs transition-colors"
+                          >
+                            {cust.assignedTo && !ASSIGNED_STAFF_OPTIONS.includes(cust.assignedTo) && (
+                              <option value={cust.assignedTo}>{cust.assignedTo}</option>
+                            )}
+                            {ASSIGNED_STAFF_OPTIONS.map((staff) => (
+                              <option key={staff} value={staff}>
+                                {staff}
+                              </option>
+                            ))}
+                          </select>
+                          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">
+                            ▼
+                          </span>
+                        </div>
                       </TableCell>
 
                       {/* Actions */}
@@ -526,12 +636,12 @@ export const CustomersPage: React.FC = () => {
                               value={cust.status}
                               onChange={(e) =>
                                 statusMutation.mutate({
-                                  id: cust.id,
-                                  status: e.target.value as EnquiryStatus,
+                                   id: cust.id,
+                                   status: e.target.value as EnquiryStatus,
                                 })
                               }
                               title="Change stage quickly"
-                              className="text-xs bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-md py-1 pl-2 pr-6 appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-solar-500"
+                              className="text-xs bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-md py-1.5 pl-2 pr-6 appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-solar-500"
                             >
                               <option value="NEW">New</option>
                               <option value="CONTACTED">Contacted</option>
@@ -555,6 +665,22 @@ export const CustomersPage: React.FC = () => {
                             className="p-1.5 text-slate-600 hover:text-solar-800"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
+                          </Button>
+
+                          {/* Delete button */}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              if (window.confirm(`Delete customer lead "${cust.name}"? This cannot be undone.`)) {
+                                deleteMutation.mutate(cust.id);
+                              }
+                            }}
+                            disabled={deleteMutation.isPending}
+                            title="Delete customer lead"
+                            className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
                           </Button>
                         </div>
                       </TableCell>

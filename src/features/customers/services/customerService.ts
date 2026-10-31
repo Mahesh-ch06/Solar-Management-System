@@ -4,6 +4,8 @@ import {
   customers,
   addCustomer as dbAddCustomer,
   updateCustomer as dbUpdateCustomer,
+  deleteCustomer as dbDeleteCustomer,
+  deleteDuplicateCustomers as dbDeleteDuplicateCustomers,
 } from '../../../store/inMemoryDb';
 import { apiClient, USE_MOCK_DATA } from '../../../api/apiClient';
 
@@ -127,4 +129,36 @@ export const customerService = {
     await delay();
     return dbUpdateCustomer(id, { status });
   },
+
+  /**
+   * Deletes a customer record
+   */
+  async deleteCustomer(id: string): Promise<boolean> {
+    if (!USE_MOCK_DATA) {
+      try {
+        const res = await apiClient.delete<{ success: boolean; message?: string }>(`/customers/${id}`);
+        if (!res.data?.success) {
+          throw new Error(res.data?.message || 'Failed to delete customer on server');
+        }
+      } catch (err: any) {
+        const serverError = err?.response?.data?.error;
+        if (serverError) {
+          throw new Error(serverError);
+        }
+        console.warn('[customerService] API deleteCustomer failed, proceeding with local deletion:', err);
+      }
+    }
+
+    await delay();
+    return dbDeleteCustomer(id);
+  },
+
+  /**
+   * Cleans duplicate customer leads and purges mock entries
+   */
+  async deleteDuplicateCustomers(): Promise<number> {
+    await delay();
+    return dbDeleteDuplicateCustomers();
+  },
 };
+

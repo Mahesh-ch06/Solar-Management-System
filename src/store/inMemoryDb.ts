@@ -14,27 +14,7 @@ import { UserRole } from '../types/roles';
 // ==========================================
 // Collections (Clean Initial State - Zero Mock Data)
 // ==========================================
-export let customers: Customer[] = [
-  {
-    id: 'cust-nikhil',
-    name: 'Nikhil (Admin)',
-    phone: '9811199999',
-    email: 'nikhil@gmail.com',
-    address: '123 Solar HQ, Central Park',
-    city: 'Delhi',
-    pincode: '110001',
-    monthlyBill: 4500,
-    requiredCapacityKW: 5,
-    systemType: 'ON_GRID',
-    subsidyRequired: true,
-    enquirySource: 'WEB_FORM',
-    status: 'CONVERTED',
-    notes: 'System Administrator Account',
-    assignedTo: 'Rajesh Sharma',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
+export let customers: Customer[] = [];
 export let surveys: Survey[] = [];
 export let quotations: Quotation[] = [];
 export let orders: Order[] = [];
@@ -264,6 +244,43 @@ export function updateCustomer(id: string, data: Partial<Customer>): Customer {
     return customers[index];
   }
   throw new Error(`Customer with id "${id}" not found`);
+}
+
+export function deleteCustomer(id: string): boolean {
+  const index = customers.findIndex((c) => c.id === id);
+  if (index !== -1) {
+    customers.splice(index, 1);
+    persistDb();
+    return true;
+  }
+  return false;
+}
+
+export function deleteDuplicateCustomers(): number {
+  const seenPhones = new Set<string>();
+  const seenIds = new Set<string>();
+  const initialLength = customers.length;
+  customers = customers.filter((c) => {
+    if (
+      c.id === 'cust-nikhil' ||
+      c.name?.toLowerCase().includes('nikhil (admin)') ||
+      c.phone?.trim() === '9811199999' ||
+      c.email?.toLowerCase() === 'nikhil@gmail.com'
+    ) {
+      return false;
+    }
+    if (seenIds.has(c.id)) return false;
+    seenIds.add(c.id);
+
+    const cleanPhone = c.phone?.replace(/\D/g, '');
+    if (cleanPhone && cleanPhone.length >= 10) {
+      if (seenPhones.has(cleanPhone)) return false;
+      seenPhones.add(cleanPhone);
+    }
+    return true;
+  });
+  persistDb();
+  return initialLength - customers.length;
 }
 
 // ==========================================
@@ -590,7 +607,22 @@ export function hydrateDbFromStorage(): void {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return;
     const parsed = JSON.parse(raw);
-    if (parsed.customers && Array.isArray(parsed.customers)) customers = parsed.customers;
+    if (parsed.customers && Array.isArray(parsed.customers)) {
+      const seenPhones = new Set<string>();
+      customers = parsed.customers
+        .filter((c: Customer) => 
+          c.id !== 'cust-nikhil' && 
+          !c.name?.toLowerCase().includes('nikhil (admin)') &&
+          c.phone?.trim() !== '9811199999' &&
+          c.email?.toLowerCase() !== 'nikhil@gmail.com'
+        )
+        .filter((c: Customer) => {
+          const cleanPhone = c.phone?.replace(/\D/g, '');
+          if (cleanPhone && cleanPhone.length >= 10 && seenPhones.has(cleanPhone)) return false;
+          if (cleanPhone && cleanPhone.length >= 10) seenPhones.add(cleanPhone);
+          return true;
+        });
+    }
     if (parsed.surveys && Array.isArray(parsed.surveys)) surveys = parsed.surveys;
     if (parsed.quotations && Array.isArray(parsed.quotations)) quotations = parsed.quotations;
     if (parsed.orders && Array.isArray(parsed.orders)) orders = parsed.orders;
@@ -614,7 +646,7 @@ export function hydrateDbFromStorage(): void {
     }
     if (parsed.roleAuditLogs && Array.isArray(parsed.roleAuditLogs)) roleAuditLogs = parsed.roleAuditLogs;
 
-    // Ensure Admin Nikhil account is always present
+    // Ensure Admin Nikhil account is always present in users
     if (!users.some((u) => u.email.toLowerCase() === 'nikhil@gmail.com')) {
       users.unshift({
         id: 'usr-admin-nikhil',
@@ -631,27 +663,8 @@ export function hydrateDbFromStorage(): void {
       });
     }
 
-    if (!customers.some((c) => c.email && c.email.toLowerCase() === 'nikhil@gmail.com')) {
-      customers.unshift({
-        id: 'cust-nikhil',
-        name: 'Nikhil (Admin)',
-        phone: '9811199999',
-        email: 'nikhil@gmail.com',
-        address: '123 Solar HQ, Central Park',
-        city: 'Delhi',
-        pincode: '110001',
-        monthlyBill: 4500,
-        requiredCapacityKW: 5,
-        systemType: 'ON_GRID',
-        subsidyRequired: true,
-        enquirySource: 'WEB_FORM',
-        status: 'CONVERTED',
-        notes: 'System Administrator Account',
-        assignedTo: 'Rajesh Sharma',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-    }
+    // Always ensure customers are purged of mock records and persisted
+    deleteDuplicateCustomers();
   } catch (e) {
     console.warn('[inMemoryDb] LocalStorage hydration error:', e);
   }
