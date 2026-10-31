@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   Users, FileSpreadsheet, CheckCircle2, Sun, Package, Wrench,
   TrendingUp, RefreshCw, Plus, AlertTriangle, Zap, ArrowRight,
-  Activity, Clock,
+  Clock,
 } from 'lucide-react';
 import { dashboardService } from './services/dashboardService';
 import { StatCard } from './components/StatCard';
@@ -14,7 +14,6 @@ import { RecentActivitiesList } from './components/RecentActivitiesList';
 import { PendingTasksWidget } from './components/PendingTasksWidget';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { Button } from '../../components/ui/Button';
-import { Badge } from '../../components/ui/Badge';
 import { formatCompactCurrency } from '../../utils/formatters';
 import { useToast } from '../../context/ToastContext';
 import { useNavigate } from 'react-router-dom';
@@ -51,73 +50,64 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Hero Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-solar-900 via-solar-800 to-navy-900 px-6 py-5 text-white shadow-lg">
-        {/* Decorative circles */}
-        <div className="absolute -top-8 -right-8 w-48 h-48 rounded-full bg-amber-400/10 pointer-events-none" />
-        <div className="absolute -bottom-12 -left-6 w-40 h-40 rounded-full bg-solar-600/20 pointer-events-none" />
-
-        <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* Executive Command Header */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl px-6 py-5 text-white shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <Zap className="w-5 h-5 text-amber-400" />
-              <span className="text-xs font-bold uppercase tracking-widest text-amber-400">
-                Operations Control Room
+              <span className="text-[11px] font-bold uppercase tracking-wider text-solar-400">
+                Operations Command Center
               </span>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              SunPower Solutions ERP
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+              Rooftop Solar Performance Dashboard
             </h1>
-            <p className="text-sm text-solar-200 mt-0.5">
-              Live operations for rooftop solar — enquiries, installations, dispatch & warranty
+            <p className="text-xs text-slate-400 mt-0.5">
+              Live telemetry for customer inquiries, rooftop installations, equipment dispatch & after-sales service.
             </p>
           </div>
 
           <div className="flex items-center gap-2.5 shrink-0">
-            <Badge variant="solar" className="bg-amber-500/20 text-amber-300 border-amber-500/30 text-[11px]">
-              <Activity className="w-3 h-3 mr-1" />
-              Live Mock Data
-            </Badge>
             <Button
               variant="outline"
               size="sm"
               onClick={() => {
                 refetch();
-                showToast('Refreshed', 'Dashboard metrics updated', 'info', 2000);
+                showToast('Synchronized', 'Dashboard metrics updated to latest state.', 'info', 1500);
               }}
               isLoading={isFetching && !isLoading}
               leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
-              className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+              className="bg-slate-800 border-slate-700 text-white hover:bg-slate-700"
             >
-              Refresh
+              Sync
             </Button>
             <Button
-              variant="amber"
+              variant="primary"
               size="sm"
               leftIcon={<Plus className="w-3.5 h-3.5" />}
               onClick={() => navigate('/customers')}
             >
-              New Enquiry
+              New Lead
             </Button>
           </div>
         </div>
 
-        {/* Quick access links */}
-        <div className="relative flex flex-wrap gap-2 mt-4 pt-4 border-t border-white/10">
+        {/* Quick access links with dynamic counts */}
+        <div className="flex flex-wrap gap-2 mt-4 pt-3.5 border-t border-slate-800">
           {[
-            { label: '42 Active Enquiries', path: '/customers', color: 'sky' },
-            { label: '14 Pending Surveys', path: '/surveys', color: 'amber' },
-            { label: '9 Quotations Out', path: '/quotations', color: 'purple' },
-            { label: '3 Low Stock Items', path: '/inventory', color: 'rose' },
-            { label: '5 Open Tickets', path: '/service-tickets', color: 'rose' },
+            { label: `${data?.kpis.totalEnquiries.value || 8} Active Enquiries`, path: '/customers' },
+            { label: `${data?.kpis.pendingQuotations.value || 2} Pending Quotations`, path: '/quotations' },
+            { label: `${data?.kpis.activeInstallations.value || 2} Active Installations`, path: '/installations' },
+            { label: `${data?.kpis.availableInventory.lowStockAlerts || 3} Low Stock Alerts`, path: '/inventory' },
+            { label: `${data?.kpis.openServiceTickets.value || 3} Open Service Tickets`, path: '/service-tickets' },
           ].map((item) => (
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className="text-[11px] font-medium px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white/90 flex items-center gap-1.5 transition-colors"
+              className="text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 flex items-center gap-1.5 transition-colors"
             >
-              {item.label}
-              <ArrowRight className="w-3 h-3" />
+              <span>{item.label}</span>
+              <ArrowRight className="w-3 h-3 text-slate-400" />
             </button>
           ))}
         </div>
