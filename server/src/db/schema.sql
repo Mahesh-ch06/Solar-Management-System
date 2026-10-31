@@ -106,6 +106,7 @@ CREATE TABLE IF NOT EXISTS quotations (
     grossMarginPercent REAL NOT NULL,
     validUntil TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'DRAFT',
+    scheduledDate TEXT,
     createdAt TEXT NOT NULL DEFAULT (datetime('now')),
     updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (customerId) REFERENCES customers(id) ON DELETE RESTRICT
@@ -202,6 +203,8 @@ CREATE TABLE IF NOT EXISTS warranty_records (
     warrantyExpiryDate TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'ACTIVE',
     installationDate TEXT,
+    createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+    updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (customerId) REFERENCES customers(id) ON DELETE RESTRICT
 );
 
