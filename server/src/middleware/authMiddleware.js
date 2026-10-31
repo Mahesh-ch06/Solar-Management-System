@@ -14,7 +14,7 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config/config.js';
 
 export function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
+  const authHeader = req.headers['authorization'] || req.headers['Authorization'];
   // Token usually comes as: "Bearer <token>"
   const token = authHeader && authHeader.startsWith('Bearer ') 
     ? authHeader.split(' ')[1] 
@@ -24,18 +24,20 @@ export function authenticateToken(req, res, next) {
     return res.status(401).json({
       success: false,
       error: 'Authentication required. No authorization token provided.',
+      message: 'Authentication required. No authorization token provided.',
     });
   }
 
   jwt.verify(token, config.jwtSecret, (err, decodedUser) => {
     if (err) {
-      return res.status(403).json({
+      return res.status(401).json({
         success: false,
         error: 'Invalid or expired authorization token.',
+        message: 'Invalid or expired authorization token.',
       });
     }
 
-    // Attach decoded user info (id, email, role) to the request object
+    // Attach decoded user info (id, email, role, name, department) to the request object
     req.user = decodedUser;
     next();
   });
@@ -51,9 +53,11 @@ export function requireRoles(...allowedRoles) {
       return res.status(403).json({
         success: false,
         error: `Access denied. Requires one of the following roles: ${allowedRoles.join(', ')}`,
+        message: `Access denied. Requires one of the following roles: ${allowedRoles.join(', ')}`,
       });
     }
     next();
   };
 }
+
 

@@ -265,6 +265,9 @@ CREATE TABLE IF NOT EXISTS service_tickets (
 
 -- Lightning fast lookup indexes
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
+CREATE INDEX IF NOT EXISTS idx_role_audit_logs_user ON role_audit_logs(userId);
 CREATE INDEX IF NOT EXISTS idx_customers_status ON customers(status);
 CREATE INDEX IF NOT EXISTS idx_surveys_customer ON surveys(customerId);
 CREATE INDEX IF NOT EXISTS idx_quotations_customer ON quotations(customerId);
@@ -273,3 +276,4 @@ CREATE INDEX IF NOT EXISTS idx_inventory_category ON inventory_items(category);
 CREATE INDEX IF NOT EXISTS idx_warranty_serial ON warranty_records(serialNumber);
 CREATE INDEX IF NOT EXISTS idx_service_status ON service_tickets(status);
 CREATE INDEX IF NOT EXISTS idx_installation_stage ON installation_jobs(stage);
+

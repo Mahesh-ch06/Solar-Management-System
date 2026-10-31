@@ -54,6 +54,12 @@ app.get('/api/v1/health', (req, res) => {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/admin', adminRoutes);
 
+// Member 1 Compatibility Aliases (for direct frontend /users and /api/auth integrations)
+app.use('/api/v1/users', adminRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/users', adminRoutes);
+
 // Member 2: CRM Leads, Technical Surveys & Dynamic Quotations
 app.use('/api/v1/customers', customerRoutes);
 app.use('/api/v1/surveys', surveyRoutes);
