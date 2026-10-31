@@ -146,3 +146,20 @@ export async function recordStockMovement(params: RecordMovementParams): Promise
 
   return movement;
 }
+
+export async function getStockMovements(itemId?: string): Promise<StockMovement[]> {
+  await delay(200);
+  if (itemId) {
+    return stockMovements.filter((m) => m.inventoryItemId === itemId);
+  }
+  return [...stockMovements];
+}
+
+export const inventoryService = {
+  getInventoryItems,
+  getInventoryItemById,
+  addItem,
+  updateItem,
+  recordStockMovement,
+  getStockMovements,
+};

@@ -9,6 +9,8 @@ import {
   updateCustomer as dbUpdateCustomer,
 } from '../../../store/inMemoryDb';
 import { Quotation, QuotationStatus, Order } from '../../../types/quotation';
+import { Customer } from '../../../types/customer';
+import { Survey } from '../../../types/survey';
 import { QuotationFormData } from '../../../utils/validators';
 import { calculateBOM, calculateQuotationTotals } from '../../../utils/bomCalculator';
 import { apiClient, USE_MOCK_DATA } from '../../../api/apiClient';
@@ -188,3 +190,25 @@ export async function getOrderById(id: string): Promise<Order | null> {
   const order = orders.find((o) => o.id === id);
   return order ? { ...order } : null;
 }
+
+export async function getCustomers(): Promise<Customer[]> {
+  await delay(150);
+  return [...customers];
+}
+
+export async function getSurveys(): Promise<Survey[]> {
+  await delay(150);
+  return [...surveys];
+}
+
+export const quotationService = {
+  getQuotations,
+  getQuotationById,
+  addQuotation,
+  updateQuotationStatus,
+  createOrderFromQuotation,
+  getOrders,
+  getOrderById,
+  getCustomers,
+  getSurveys,
+};
