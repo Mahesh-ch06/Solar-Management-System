@@ -13,6 +13,8 @@ import {
   WarrantyStatus,
 } from '../types/operations';
 import { InstallationJob } from '../types/installation';
+import { UserAccount, RoleAuditEntry } from '../types/auth';
+import { UserRole } from '../types/roles';
 import { calculateBOM } from '../utils/bomCalculator';
 
 // ==========================================
@@ -1304,6 +1306,7 @@ export function addCustomer(
     ...c,
   } as Customer;
   customers.unshift(customer);
+  persistDb();
   return customer;
 }
 
@@ -1318,6 +1321,7 @@ export function updateCustomer(id: string, data: Partial<Customer>): Customer {
     updatedAt: new Date().toISOString(),
   };
   customers[index] = updated;
+  persistDb();
   return updated;
 }
 
@@ -1334,6 +1338,7 @@ export function addSurvey(
     ...s,
   } as Survey;
   surveys.unshift(survey);
+  persistDb();
   return survey;
 }
 
@@ -1348,6 +1353,7 @@ export function updateSurvey(id: string, data: Partial<Survey>): Survey {
     updatedAt: new Date().toISOString(),
   };
   surveys[index] = updated;
+  persistDb();
   return updated;
 }
 
@@ -1364,6 +1370,7 @@ export function addQuotation(
     ...q,
   } as Quotation;
   quotations.unshift(quotation);
+  persistDb();
   return quotation;
 }
 
@@ -1379,6 +1386,7 @@ export function updateQuotation(
     updatedAt: new Date().toISOString(),
   };
   quotations[index] = updated;
+  persistDb();
   return updated;
 }
 
@@ -1395,6 +1403,7 @@ export function addOrder(
     ...o,
   } as Order;
   orders.unshift(order);
+  persistDb();
   return order;
 }
 
@@ -1409,6 +1418,7 @@ export function updateOrder(id: string, data: Partial<Order>): Order {
     updatedAt: new Date().toISOString(),
   };
   orders[index] = updated;
+  persistDb();
   return updated;
 }
 
@@ -1425,6 +1435,7 @@ export function addInventoryItem(
     ...item,
   } as InventoryItem;
   inventoryItems.unshift(inventoryItem);
+  persistDb();
   return inventoryItem;
 }
 
@@ -1442,6 +1453,7 @@ export function updateInventoryItem(
     updatedAt: new Date().toISOString(),
   };
   inventoryItems[index] = updated;
+  persistDb();
   return updated;
 }
 
@@ -1470,6 +1482,7 @@ export function addStockMovement(
     }
     item.updatedAt = new Date().toISOString();
   }
+  persistDb();
   return movement;
 }
 
@@ -1486,6 +1499,7 @@ export function addDispatchOrder(
     ...d,
   } as DispatchOrder;
   dispatchOrders.unshift(dispatchOrder);
+  persistDb();
   return dispatchOrder;
 }
 
@@ -1501,6 +1515,7 @@ export function updateDispatchOrder(
     updatedAt: new Date().toISOString(),
   };
   dispatchOrders[index] = updated;
+  persistDb();
   return updated;
 }
 
@@ -1514,6 +1529,7 @@ export function addWarrantyRecord(
     ...w,
   } as WarrantyRecord;
   warrantyRecords.unshift(record);
+  persistDb();
   return record;
 }
 
@@ -1530,6 +1546,7 @@ export function updateWarrantyRecord(
     ...data,
   };
   warrantyRecords[index] = updated;
+  persistDb();
   return updated;
 }
 
@@ -1546,6 +1563,7 @@ export function addServiceTicket(
     ...t,
   } as ServiceTicket;
   serviceTickets.unshift(ticket);
+  persistDb();
   return ticket;
 }
 
@@ -1563,6 +1581,7 @@ export function updateServiceTicket(
     updatedAt: new Date().toISOString(),
   };
   serviceTickets[index] = updated;
+  persistDb();
   return updated;
 }
 
@@ -1718,6 +1737,7 @@ export function addInstallationJob(job: InstallationJob): InstallationJob {
     updatedAt: newJobTimestamp(),
   };
   installationJobs.unshift(newJob);
+  persistDb();
   return newJob;
 }
 
@@ -1739,6 +1759,277 @@ export function updateInstallationJob(
     updatedAt: new Date().toISOString(),
   };
   installationJobs[index] = updated;
+  persistDb();
   return updated;
 }
+
+// ==========================================
+// 11. User Accounts (Provisioned staff & clients)
+// ==========================================
+export let users: UserAccount[] = [
+  {
+    id: 'usr-admin-01',
+    name: 'Rajesh Sharma',
+    email: 'admin@sunpowersolutions.in',
+    password: 'Password@123',
+    phone: '+91 98111 00001',
+    role: 'ADMIN',
+    department: 'Executive Management',
+    status: 'ACTIVE',
+    createdAt: '2026-08-01T09:00:00Z',
+    roleAssignedBy: 'System Initializer',
+    roleAssignedAt: '2026-08-01T09:00:00Z',
+  },
+  {
+    id: 'usr-dir-01',
+    name: 'Ananya Verma',
+    email: 'director@sunpowersolutions.in',
+    password: 'Password@123',
+    phone: '+91 98111 00002',
+    role: 'DIRECTOR',
+    department: 'Board of Directors',
+    status: 'ACTIVE',
+    createdAt: '2026-08-01T09:00:00Z',
+    roleAssignedBy: 'System Initializer',
+    roleAssignedAt: '2026-08-01T09:00:00Z',
+  },
+  {
+    id: 'usr-sales-01',
+    name: 'Vikram Mehta',
+    email: 'sales@sunpowersolutions.in',
+    password: 'Password@123',
+    phone: '+91 98111 00003',
+    role: 'SALES',
+    department: 'Commercial Solutions',
+    status: 'ACTIVE',
+    createdAt: '2026-08-15T10:00:00Z',
+    roleAssignedBy: 'Rajesh Sharma (Admin)',
+    roleAssignedAt: '2026-08-15T10:00:00Z',
+  },
+  {
+    id: 'usr-tech-01',
+    name: 'Manoj Kumar',
+    email: 'tech@sunpowersolutions.in',
+    password: 'Password@123',
+    phone: '+91 98765 01001',
+    role: 'TECHNICIAN',
+    department: 'Field Engineering Team A',
+    status: 'ACTIVE',
+    createdAt: '2026-08-20T11:00:00Z',
+    roleAssignedBy: 'Rajesh Sharma (Admin)',
+    roleAssignedAt: '2026-08-20T11:00:00Z',
+  },
+  {
+    id: 'usr-wh-01',
+    name: 'Suresh Patel',
+    email: 'warehouse@sunpowersolutions.in',
+    password: 'Password@123',
+    phone: '+91 98111 00005',
+    role: 'WAREHOUSE_MANAGER',
+    department: 'Supply Chain & Logistics',
+    status: 'ACTIVE',
+    createdAt: '2026-08-25T14:00:00Z',
+    roleAssignedBy: 'Rajesh Sharma (Admin)',
+    roleAssignedAt: '2026-08-25T14:00:00Z',
+  },
+  {
+    id: 'usr-supp-01',
+    name: 'Pooja Nair',
+    email: 'support@sunpowersolutions.in',
+    password: 'Password@123',
+    phone: '+91 98111 00006',
+    role: 'SUPPORT_AGENT',
+    department: 'Customer Care & Warranty',
+    status: 'ACTIVE',
+    createdAt: '2026-09-01T09:30:00Z',
+    roleAssignedBy: 'Rajesh Sharma (Admin)',
+    roleAssignedAt: '2026-09-01T09:30:00Z',
+  },
+  {
+    id: 'usr-pending-01',
+    name: 'Rohan Deshmukh',
+    email: 'rohan.d@gmail.com',
+    password: 'Password@123',
+    phone: '+91 98111 00007',
+    role: 'SALES',
+    department: 'Sales Trainee',
+    status: 'PENDING_APPROVAL',
+    createdAt: '2026-10-30T16:20:00Z',
+  },
+];
+
+// ==========================================
+// 12. Role Change Audit Logs
+// ==========================================
+export let roleAuditLogs: RoleAuditEntry[] = [
+  {
+    id: 'audit-01',
+    userId: 'usr-tech-01',
+    userName: 'Manoj Kumar',
+    userEmail: 'tech@sunpowersolutions.in',
+    oldRole: 'SALES',
+    newRole: 'TECHNICIAN',
+    changedByAdminId: 'usr-admin-01',
+    changedByAdminName: 'Rajesh Sharma',
+    reason: 'Transferred from commercial surveys to rooftop lead installation engineer',
+    timestamp: '2026-08-20T11:00:00Z',
+  },
+  {
+    id: 'audit-02',
+    userId: 'usr-wh-01',
+    userName: 'Suresh Patel',
+    userEmail: 'warehouse@sunpowersolutions.in',
+    oldRole: 'SALES',
+    newRole: 'WAREHOUSE_MANAGER',
+    changedByAdminId: 'usr-admin-01',
+    changedByAdminName: 'Rajesh Sharma',
+    reason: 'Promoted to manage equipment stock, serial scanning and dispatches',
+    timestamp: '2026-08-25T14:00:00Z',
+  },
+];
+
+export function getUsers(): UserAccount[] {
+  return [...users];
+}
+
+export function getUserById(id: string): UserAccount | undefined {
+  return users.find((u) => u.id === id);
+}
+
+export function getUserByEmail(email: string): UserAccount | undefined {
+  const norm = email.trim().toLowerCase();
+  return users.find((u) => u.email.trim().toLowerCase() === norm);
+}
+
+export function createUserAccount(
+  data: Omit<UserAccount, 'id' | 'createdAt'>
+): UserAccount {
+  const newUser: UserAccount = {
+    ...data,
+    id: `usr-${Date.now()}`,
+    createdAt: new Date().toISOString(),
+  };
+  users.unshift(newUser);
+  persistDb();
+  return newUser;
+}
+
+export function updateUserRole(
+  userId: string,
+  newRole: UserRole,
+  adminId: string,
+  adminName: string,
+  reason: string
+): { user: UserAccount; audit: RoleAuditEntry } {
+  const userIndex = users.findIndex((u) => u.id === userId);
+  if (userIndex === -1) {
+    throw new Error(`User with id "${userId}" not found`);
+  }
+
+  const user = users[userIndex];
+  const oldRole = user.role;
+
+  const updatedUser: UserAccount = {
+    ...user,
+    role: newRole,
+    roleAssignedBy: adminName,
+    roleAssignedAt: new Date().toISOString(),
+  };
+
+  users[userIndex] = updatedUser;
+
+  const auditEntry: RoleAuditEntry = {
+    id: `audit-${Date.now()}`,
+    userId: user.id,
+    userName: user.name,
+    userEmail: user.email,
+    oldRole,
+    newRole,
+    changedByAdminId: adminId,
+    changedByAdminName: adminName,
+    reason,
+    timestamp: new Date().toISOString(),
+  };
+
+  roleAuditLogs.unshift(auditEntry);
+  persistDb();
+
+  return { user: updatedUser, audit: auditEntry };
+}
+
+export function updateUserStatus(
+  userId: string,
+  status: 'ACTIVE' | 'PENDING_APPROVAL' | 'SUSPENDED'
+): UserAccount {
+  const index = users.findIndex((u) => u.id === userId);
+  if (index === -1) {
+    throw new Error(`User with id "${userId}" not found`);
+  }
+  const updated: UserAccount = {
+    ...users[index],
+    status,
+  };
+  users[index] = updated;
+  persistDb();
+  return updated;
+}
+
+export function getRoleAuditLogs(): RoleAuditEntry[] {
+  return [...roleAuditLogs];
+}
+
+// ==========================================
+// 13. Persistent LocalStorage Layer
+// ==========================================
+const STORAGE_KEY = 'sunpower_db_state_v2';
+
+export function persistDb(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const state = {
+      customers,
+      surveys,
+      quotations,
+      orders,
+      inventoryItems,
+      stockMovements,
+      dispatchOrders,
+      warrantyRecords,
+      serviceTickets,
+      installationJobs,
+      users,
+      roleAuditLogs,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    console.warn('[inMemoryDb] LocalStorage save error:', e);
+  }
+}
+
+export function hydrateDbFromStorage(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (parsed.customers && Array.isArray(parsed.customers)) customers = parsed.customers;
+    if (parsed.surveys && Array.isArray(parsed.surveys)) surveys = parsed.surveys;
+    if (parsed.quotations && Array.isArray(parsed.quotations)) quotations = parsed.quotations;
+    if (parsed.orders && Array.isArray(parsed.orders)) orders = parsed.orders;
+    if (parsed.inventoryItems && Array.isArray(parsed.inventoryItems)) inventoryItems = parsed.inventoryItems;
+    if (parsed.stockMovements && Array.isArray(parsed.stockMovements)) stockMovements = parsed.stockMovements;
+    if (parsed.dispatchOrders && Array.isArray(parsed.dispatchOrders)) dispatchOrders = parsed.dispatchOrders;
+    if (parsed.warrantyRecords && Array.isArray(parsed.warrantyRecords)) warrantyRecords = parsed.warrantyRecords;
+    if (parsed.serviceTickets && Array.isArray(parsed.serviceTickets)) serviceTickets = parsed.serviceTickets;
+    if (parsed.installationJobs && Array.isArray(parsed.installationJobs)) installationJobs = parsed.installationJobs;
+    if (parsed.users && Array.isArray(parsed.users)) users = parsed.users;
+    if (parsed.roleAuditLogs && Array.isArray(parsed.roleAuditLogs)) roleAuditLogs = parsed.roleAuditLogs;
+  } catch (e) {
+    console.warn('[inMemoryDb] LocalStorage hydration error:', e);
+  }
+}
+
+// Hydrate state immediately
+hydrateDbFromStorage();
+
 
