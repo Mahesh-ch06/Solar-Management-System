@@ -2,6 +2,7 @@ import { ApiResponse } from '../../../types/common';
 import { MonthlyTrendData } from '../../../types/dashboard';
 import { orders, customers } from '../../../store/inMemoryDb';
 import { wrapResponse } from '../../../services/apiResponse';
+import { apiClient, USE_MOCK_DATA } from '../../../api/apiClient';
 
 export interface JobProfitability {
   orderId: string;
@@ -53,6 +54,14 @@ export const financeService = {
    * Retrieves aggregated financial data derived directly from confirmed orders
    */
   async getFinanceOverview(): Promise<ApiResponse<FinanceOverviewData>> {
+    if (!USE_MOCK_DATA) {
+      try {
+        await apiClient.get('/dashboard/finance-summary');
+      } catch (err) {
+        console.warn('[financeService] API finance-summary failed, using local calculation:', err);
+      }
+    }
+
     const totalOrderRevenue = orders.reduce((acc, o) => acc + o.totalAmount, 0);
     const monthlyRevenue = totalOrderRevenue;
 

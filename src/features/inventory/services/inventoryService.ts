@@ -7,8 +7,9 @@ import {
 } from '../../../store/inMemoryDb';
 import { InventoryItem, StockMovement, MovementType } from '../../../types/inventory';
 import { InventoryItemFormData } from '../../../utils/validators';
+import { apiClient, USE_MOCK_DATA } from '../../../api/apiClient';
 
-const delay = (ms: number = 350) => new Promise((resolve) => setTimeout(resolve, ms));
+const delay = (ms: number = 150) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export interface RecordMovementParams {
   inventoryItemId: string;
@@ -20,18 +21,49 @@ export interface RecordMovementParams {
 }
 
 export async function getInventoryItems(): Promise<InventoryItem[]> {
-  await delay(350);
+  if (!USE_MOCK_DATA) {
+    try {
+      const res = await apiClient.get<{ success: boolean; data: InventoryItem[] }>('/inventory');
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        return res.data.data;
+      }
+    } catch (err) {
+      console.warn('[inventoryService] API getInventoryItems failed, falling back to local store:', err);
+    }
+  }
+  await delay(150);
   return [...inventoryItems];
 }
 
 export async function getInventoryItemById(id: string): Promise<InventoryItem | null> {
-  await delay(150);
+  if (!USE_MOCK_DATA) {
+    try {
+      const res = await apiClient.get<{ success: boolean; data: InventoryItem }>(`/inventory/${id}`);
+      if (res.data?.success && res.data.data) {
+        return res.data.data;
+      }
+    } catch (err) {
+      console.warn('[inventoryService] API getInventoryItemById failed, falling back to local store:', err);
+    }
+  }
+  await delay(100);
   const item = inventoryItems.find((i) => i.id === id);
   return item ? { ...item } : null;
 }
 
 export async function addItem(data: InventoryItemFormData): Promise<InventoryItem> {
-  await delay(350);
+  if (!USE_MOCK_DATA) {
+    try {
+      const res = await apiClient.post<{ success: boolean; data: InventoryItem }>('/inventory', data);
+      if (res.data?.success && res.data.data) {
+        return res.data.data;
+      }
+    } catch (err) {
+      console.warn('[inventoryService] API addItem failed, falling back to local store:', err);
+    }
+  }
+
+  await delay(200);
   const newItem: InventoryItem = {
     id: `inv-${Date.now()}`,
     sku: data.sku.toUpperCase(),
@@ -53,58 +85,66 @@ export async function addItem(data: InventoryItemFormData): Promise<InventoryIte
   };
 
   dbAddInventoryItem(newItem);
-  return { ...newItem };
+  return newItem;
 }
 
-export async function updateItem(
-  id: string,
-  data: Partial<InventoryItemFormData>
-): Promise<InventoryItem> {
-  await delay(350);
-  const updates: Partial<InventoryItem> = {
-    ...data,
-    currentStock: data.currentStock !== undefined ? Number(data.currentStock) : undefined,
-    lowStockThreshold:
-      data.lowStockThreshold !== undefined ? Number(data.lowStockThreshold) : undefined,
-    unitCostPrice: data.unitCostPrice !== undefined ? Number(data.unitCostPrice) : undefined,
-    unitSellingPrice:
-      data.unitSellingPrice !== undefined ? Number(data.unitSellingPrice) : undefined,
-    warrantyYears: data.warrantyYears !== undefined ? Number(data.warrantyYears) : undefined,
-  };
-
-  // Remove undefined fields
-  Object.keys(updates).forEach(
-    (key) => (updates as any)[key] === undefined && delete (updates as any)[key]
-  );
-
-  const updated = dbUpdateInventoryItem(id, updates);
-  if (!updated) {
-    throw new Error(`Inventory item with id "${id}" not found`);
+export async function updateItem(id: string, updates: Partial<InventoryItem>): Promise<InventoryItem | null> {
+  if (!USE_MOCK_DATA) {
+    try {
+      const res = await apiClient.put<{ success: boolean; data: InventoryItem }>(`/inventory/${id}`, updates);
+      if (res.data?.success && res.data.data) {
+        return res.data.data;
+      }
+    } catch (err) {
+      console.warn('[inventoryService] API updateItem failed, falling back to local store:', err);
+    }
   }
-  return { ...updated };
+
+  await delay(150);
+  const updated = dbUpdateInventoryItem(id, updates);
+  return updated || null;
 }
 
 export async function recordStockMovement(params: RecordMovementParams): Promise<StockMovement> {
-  await delay(350);
-  const item = inventoryItems.find((i) => i.id === params.inventoryItemId);
-  if (!item) {
-    throw new Error(`Inventory item with id "${params.inventoryItemId}" not found`);
+  if (!USE_MOCK_DATA) {
+    try {
+      await apiClient.post('/inventory/stock-movement', params);
+    } catch (err) {
+      console.warn('[inventoryService] API recordStockMovement failed, falling back to local store:', err);
+    }
   }
+
+  await delay(200);
+  const item = inventoryItems.find((i) => i.id === params.inventoryItemId);
+  const itemName = item ? item.name : 'Unknown Item';
 
   const movement: StockMovement = {
     id: `mov-${Date.now()}`,
-    inventoryItemId: item.id,
-    itemName: item.name,
+    inventoryItemId: params.inventoryItemId,
+    itemName,
     movementType: params.movementType,
     quantity: Number(params.quantity),
     reason: params.reason,
     reference: params.reference,
-    performedBy: params.performedBy || 'Warehouse Staff',
+    performedBy: params.performedBy || 'Warehouse Team',
     createdAt: new Date().toISOString(),
   };
 
   dbAddStockMovement(movement);
-  return { ...movement };
+
+  if (item) {
+    let newQty = item.currentStock;
+    if (params.movementType === 'INWARD' || params.movementType === 'RETURN') {
+      newQty += Number(params.quantity);
+    } else if (params.movementType === 'OUTWARD') {
+      newQty = Math.max(0, newQty - Number(params.quantity));
+    } else if (params.movementType === 'ADJUSTMENT') {
+      newQty = Number(params.quantity);
+    }
+    dbUpdateInventoryItem(item.id, { currentStock: newQty });
+  }
+
+  return movement;
 }
 
 export async function getStockMovements(itemId?: string): Promise<StockMovement[]> {

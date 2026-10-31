@@ -14,7 +14,27 @@ import { UserRole } from '../types/roles';
 // ==========================================
 // Collections (Clean Initial State - Zero Mock Data)
 // ==========================================
-export let customers: Customer[] = [];
+export let customers: Customer[] = [
+  {
+    id: 'cust-nikhil',
+    name: 'Nikhil (Admin)',
+    phone: '9811199999',
+    email: 'nikhil@gmail.com',
+    address: '123 Solar HQ, Central Park',
+    city: 'Delhi',
+    pincode: '110001',
+    monthlyBill: 4500,
+    requiredCapacityKW: 5,
+    systemType: 'ON_GRID',
+    subsidyRequired: true,
+    enquirySource: 'WEB_FORM',
+    status: 'CONVERTED',
+    notes: 'System Administrator Account',
+    assignedTo: 'Rajesh Sharma',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
 export let surveys: Survey[] = [];
 export let quotations: Quotation[] = [];
 export let orders: Order[] = [];
@@ -37,6 +57,19 @@ export const INITIAL_USERS: UserAccount[] = [
     createdAt: '2026-08-01T09:00:00Z',
     roleAssignedBy: 'System Initializer',
     roleAssignedAt: '2026-08-01T09:00:00Z',
+  },
+  {
+    id: 'usr-admin-nikhil',
+    name: 'Nikhil',
+    email: 'nikhil@gmail.com',
+    password: '123456',
+    role: 'ADMIN',
+    status: 'ACTIVE',
+    phone: '+91 98111 99999',
+    department: 'Executive Management',
+    roleAssignedBy: 'System Initializer',
+    roleAssignedAt: '2026-08-01T09:00:00Z',
+    createdAt: '2026-08-01T09:00:00Z',
   },
   {
     id: 'usr-admin-01',
@@ -487,6 +520,45 @@ export function hydrateDbFromStorage(): void {
       users = [...INITIAL_USERS];
     }
     if (parsed.roleAuditLogs && Array.isArray(parsed.roleAuditLogs)) roleAuditLogs = parsed.roleAuditLogs;
+
+    // Ensure Admin Nikhil account is always present
+    if (!users.some((u) => u.email.toLowerCase() === 'nikhil@gmail.com')) {
+      users.unshift({
+        id: 'usr-admin-nikhil',
+        name: 'Nikhil',
+        email: 'nikhil@gmail.com',
+        password: '123456',
+        role: 'ADMIN',
+        status: 'ACTIVE',
+        phone: '+91 98111 99999',
+        department: 'Executive Management',
+        roleAssignedBy: 'System Initializer',
+        roleAssignedAt: '2026-08-01T09:00:00Z',
+        createdAt: '2026-08-01T09:00:00Z',
+      });
+    }
+
+    if (!customers.some((c) => c.email && c.email.toLowerCase() === 'nikhil@gmail.com')) {
+      customers.unshift({
+        id: 'cust-nikhil',
+        name: 'Nikhil (Admin)',
+        phone: '9811199999',
+        email: 'nikhil@gmail.com',
+        address: '123 Solar HQ, Central Park',
+        city: 'Delhi',
+        pincode: '110001',
+        monthlyBill: 4500,
+        requiredCapacityKW: 5,
+        systemType: 'ON_GRID',
+        subsidyRequired: true,
+        enquirySource: 'WEB_FORM',
+        status: 'CONVERTED',
+        notes: 'System Administrator Account',
+        assignedTo: 'Rajesh Sharma',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+    }
   } catch (e) {
     console.warn('[inMemoryDb] LocalStorage hydration error:', e);
   }

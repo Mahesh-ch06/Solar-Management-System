@@ -21,6 +21,7 @@ import { Select } from '../../components/ui/Select';
 import { Textarea } from '../../components/ui/Textarea';
 import { SearchInput } from '../../components/ui/FormControls';
 import { useToast } from '../../context/ToastContext';
+import { apiClient, USE_MOCK_DATA } from '../../api/apiClient';
 import {
   ShieldCheck,
   UserCheck,
@@ -117,6 +118,9 @@ export const UserManagementPage: React.FC = () => {
           reason: changeReason.trim(),
           activateUser: true,
         });
+        if (selectedUserForRole.status === 'PENDING_APPROVAL') {
+          await apiClient.patch(`/admin/users/${selectedUserForRole.id}/status`, { status: 'ACTIVE' }).catch(() => {});
+        }
       } catch {
         // Fallback to local store
       }

@@ -10,6 +10,7 @@ import {
   inventoryItems,
 } from '../../../store/inMemoryDb';
 import { wrapResponse } from '../../../services/apiResponse';
+import { apiClient, USE_MOCK_DATA } from '../../../api/apiClient';
 
 export interface CreateDispatchInput {
   orderId?: string;
@@ -30,6 +31,16 @@ export const dispatchService = {
    * Retrieves all dispatch orders
    */
   async getDispatchOrders(): Promise<ApiResponse<DispatchOrder[]>> {
+    if (!USE_MOCK_DATA) {
+      try {
+        const res = await apiClient.get<{ success: boolean; data: DispatchOrder[] }>('/dispatch');
+        if (res.data?.success && Array.isArray(res.data.data)) {
+          return wrapResponse<DispatchOrder[]>(res.data.data);
+        }
+      } catch (err) {
+        console.warn('[dispatchService] API getDispatchOrders failed, falling back to local store:', err);
+      }
+    }
     return wrapResponse<DispatchOrder[]>([...dispatchOrders]);
   },
 
@@ -37,6 +48,16 @@ export const dispatchService = {
    * Retrieves a single dispatch order by ID
    */
   async getDispatchById(id: string): Promise<ApiResponse<DispatchOrder | null>> {
+    if (!USE_MOCK_DATA) {
+      try {
+        const res = await apiClient.get<{ success: boolean; data: DispatchOrder }>(`/dispatch/${id}`);
+        if (res.data?.success && res.data.data) {
+          return wrapResponse<DispatchOrder | null>(res.data.data);
+        }
+      } catch (err) {
+        console.warn('[dispatchService] API getDispatchById failed, falling back to local store:', err);
+      }
+    }
     const order = dispatchOrders.find((d) => d.id === id) || null;
     return wrapResponse<DispatchOrder | null>(order ? { ...order } : null);
   },
@@ -45,24 +66,31 @@ export const dispatchService = {
    * Creates a new dispatch order in PENDING_SERIAL state
    */
   async createDispatch(data: CreateDispatchInput): Promise<ApiResponse<DispatchOrder>> {
+    if (!USE_MOCK_DATA) {
+      try {
+        const res = await apiClient.post<{ success: boolean; data: DispatchOrder }>('/dispatch', data);
+        if (res.data?.success && res.data.data) {
+          return wrapResponse<DispatchOrder>(res.data.data, 'Dispatch order created');
+        }
+      } catch (err) {
+        console.warn('[dispatchService] API createDispatch failed, falling back to local store:', err);
+      }
+    }
+
     const customer = customers.find((c) => c.id === data.customerId);
     const count = dispatchOrders.length + 1;
     const dispatchNumber = `DSP-2026-${String(count).padStart(3, '0')}`;
 
     const newDispatch: DispatchOrder = {
-      id: `dsp-${Date.now()}`,
+      id: `disp-${Date.now()}`,
       dispatchNumber,
       orderId: data.orderId || `ord-${Date.now()}`,
       customerId: data.customerId,
       customerName: data.customerName || customer?.name || 'Customer',
-      customerAddress:
-        data.customerAddress || customer?.address || 'Site Address',
-      items: data.items.map((item) => ({
-        inventoryItemId: item.inventoryItemId,
-        itemName: item.itemName,
-        quantity: item.quantity,
-        serialNumbers: item.serialNumbers || [],
-        warrantyYears: item.warrantyYears || 5,
+      customerAddress: data.customerAddress || customer?.address || 'Site Address',
+      items: data.items.map((i) => ({
+        ...i,
+        serialNumbers: i.serialNumbers || [],
       })),
       status: 'PENDING_SERIAL',
       createdAt: new Date().toISOString(),
@@ -74,115 +102,121 @@ export const dispatchService = {
   },
 
   /**
-   * Updates serial numbers for items in a dispatch order and marks it as READY
+   * Records a verified serial number against a dispatch item and auto-registers warranty
    */
-  async updateDispatchSerials(
-    id: string,
-    itemsWithSerials: { inventoryItemId: string; serialNumbers: string[] }[]
+  async recordSerialScan(
+    dispatchOrderId: string,
+    inventoryItemId: string,
+    serialNumber: string
   ): Promise<ApiResponse<DispatchOrder>> {
-    const existing = dispatchOrders.find((d) => d.id === id);
-    if (!existing) {
-      throw new Error(`Dispatch order with id ${id} not found`);
+    const cleanSerial = serialNumber.trim().toUpperCase();
+
+    if (!USE_MOCK_DATA) {
+      try {
+        await apiClient.post(`/dispatch/${dispatchOrderId}/scan-serial`, {
+          inventoryItemId,
+          serialNumber: cleanSerial,
+        });
+      } catch (err: any) {
+        const errMsg = err?.response?.data?.error;
+        if (errMsg) throw new Error(errMsg);
+        console.warn('[dispatchService] API recordSerialScan failed, falling back to local store:', err);
+      }
     }
 
-    const updatedItems = existing.items.map((item) => {
-      const match = itemsWithSerials.find((m) => m.inventoryItemId === item.inventoryItemId);
-      if (match) {
-        return {
-          ...item,
-          serialNumbers: [...match.serialNumbers],
-        };
-      }
-      return item;
-    });
+    const order = dispatchOrders.find((d) => d.id === dispatchOrderId);
+    if (!order) {
+      throw new Error(`Dispatch order "${dispatchOrderId}" not found`);
+    }
 
-    const updated = updateDispatchOrder(id, {
+    const item = order.items.find((i) => i.inventoryItemId === inventoryItemId);
+    if (!item) {
+      throw new Error(`Item "${inventoryItemId}" not found in dispatch order`);
+    }
+
+    if (item.serialNumbers.includes(cleanSerial)) {
+      throw new Error(`Serial number "${cleanSerial}" is already scanned in this order`);
+    }
+
+    const alreadyRegistered = warrantyRecords.find(
+      (w) => w.serialNumber.trim().toUpperCase() === cleanSerial
+    );
+    if (alreadyRegistered) {
+      throw new Error(
+        `Serial number "${cleanSerial}" is already assigned to Customer "${alreadyRegistered.customerName}"`
+      );
+    }
+
+    const updatedSerials = [...item.serialNumbers, cleanSerial];
+    const updatedItems = order.items.map((i) =>
+      i.inventoryItemId === inventoryItemId ? { ...i, serialNumbers: updatedSerials } : i
+    );
+
+    const allItemsComplete = updatedItems.every(
+      (i) => i.serialNumbers.length >= i.quantity
+    );
+    const newStatus = allItemsComplete ? 'READY' : 'PENDING_SERIAL';
+
+    const updatedOrder = updateDispatchOrder(dispatchOrderId, {
       items: updatedItems,
-      status: 'READY',
+      status: newStatus,
       updatedAt: new Date().toISOString(),
     });
 
-    return wrapResponse<DispatchOrder>(updated, 'Serial numbers assigned successfully');
+    const invItem = inventoryItems.find((i) => i.id === inventoryItemId);
+    const customer = customers.find((c) => c.id === order.customerId);
+    const now = new Date();
+    const expiryDate = new Date();
+    expiryDate.setFullYear(now.getFullYear() + item.warrantyYears);
+
+    const newWarranty: WarrantyRecord = {
+      id: `warr-${Date.now()}`,
+      serialNumber: cleanSerial,
+      inventoryItemId: item.inventoryItemId,
+      itemName: item.itemName,
+      itemCategory: invItem?.category || 'OTHER',
+      brand: invItem?.brand || 'Solar Brand',
+      model: invItem?.model || 'Model',
+      customerId: order.customerId,
+      customerName: order.customerName,
+      customerPhone: customer?.phone || '—',
+      dispatchOrderId: order.id,
+      dispatchDate: now.toISOString().split('T')[0],
+      warrantyYears: item.warrantyYears,
+      warrantyExpiryDate: expiryDate.toISOString().split('T')[0],
+      status: 'ACTIVE',
+    };
+
+    addWarrantyRecord(newWarranty);
+
+    return wrapResponse<DispatchOrder>(
+      updatedOrder,
+      `Serial "${cleanSerial}" recorded. Warranty auto-registered.`
+    );
   },
 
   /**
-   * Marks dispatch order as DISPATCHED and automatically creates warranty records
+   * Updates dispatch status
    */
-  async markDispatched(
+  async updateStatus(
     id: string,
-    vehicleNumber: string,
-    driverName: string
+    status: DispatchOrder['status'],
+    details?: { vehicleNumber?: string; driverName?: string }
   ): Promise<ApiResponse<DispatchOrder>> {
-    const existing = dispatchOrders.find((d) => d.id === id);
-    if (!existing) {
-      throw new Error(`Dispatch order with id ${id} not found`);
-    }
-
-    const nowIso = new Date().toISOString();
-    const customer = customers.find((c) => c.id === existing.customerId);
-
-    // Auto-create warranty records for each assigned serial number
-    for (const item of existing.items) {
-      const invItem = inventoryItems.find((inv) => inv.id === item.inventoryItemId);
-      const warrantyYears = item.warrantyYears || invItem?.warrantyYears || 5;
-
-      const expiryDate = new Date();
-      expiryDate.setFullYear(expiryDate.getFullYear() + warrantyYears);
-
-      for (const serial of item.serialNumbers) {
-        if (!serial) continue;
-
-        const alreadyExists = warrantyRecords.some(
-          (w) => w.serialNumber.trim().toLowerCase() === serial.trim().toLowerCase()
-        );
-
-        if (!alreadyExists) {
-          const newRecord: WarrantyRecord = {
-            id: `war-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-            serialNumber: serial.trim(),
-            inventoryItemId: item.inventoryItemId,
-            itemName: item.itemName,
-            itemCategory: invItem?.category || 'SOLAR_PANEL',
-            brand: invItem?.brand || 'Solar OEM',
-            model: invItem?.model || item.itemName,
-            customerId: existing.customerId,
-            customerName: existing.customerName,
-            customerPhone: customer?.phone || '—',
-            dispatchOrderId: existing.id,
-            dispatchDate: nowIso,
-            warrantyYears,
-            warrantyExpiryDate: expiryDate.toISOString(),
-            status: 'ACTIVE',
-            installationDate: nowIso,
-          };
-
-          addWarrantyRecord(newRecord);
-        }
+    if (!USE_MOCK_DATA) {
+      try {
+        await apiClient.patch(`/dispatch/${id}/status`, { status, ...details });
+      } catch (err) {
+        console.warn('[dispatchService] API updateStatus failed, continuing with local store:', err);
       }
     }
 
     const updated = updateDispatchOrder(id, {
-      status: 'DISPATCHED',
-      vehicleNumber,
-      driverName,
-      dispatchedAt: nowIso,
-      updatedAt: nowIso,
+      status,
+      ...details,
+      updatedAt: new Date().toISOString(),
     });
 
-    return wrapResponse<DispatchOrder>(updated, 'Order marked as dispatched');
-  },
-
-  /**
-   * Marks dispatch order as DELIVERED
-   */
-  async markDelivered(id: string): Promise<ApiResponse<DispatchOrder>> {
-    const nowIso = new Date().toISOString();
-    const updated = updateDispatchOrder(id, {
-      status: 'DELIVERED',
-      deliveredAt: nowIso,
-      updatedAt: nowIso,
-    });
-
-    return wrapResponse<DispatchOrder>(updated, 'Order marked as delivered');
+    return wrapResponse<DispatchOrder>(updated, `Status updated to ${status}`);
   },
 };

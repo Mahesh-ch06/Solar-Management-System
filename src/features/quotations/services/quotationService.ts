@@ -5,28 +5,62 @@ import {
   orders,
   addQuotation as dbAddQuotation,
   updateQuotation as dbUpdateQuotation,
+  addOrder as dbAddOrder,
+  updateCustomer as dbUpdateCustomer,
 } from '../../../store/inMemoryDb';
 import { Quotation, QuotationStatus, Order } from '../../../types/quotation';
 import { Customer } from '../../../types/customer';
 import { Survey } from '../../../types/survey';
 import { QuotationFormData } from '../../../utils/validators';
 import { calculateBOM, calculateQuotationTotals } from '../../../utils/bomCalculator';
+import { apiClient, USE_MOCK_DATA } from '../../../api/apiClient';
 
-const delay = (ms: number = 350) => new Promise((resolve) => setTimeout(resolve, ms));
+const delay = (ms: number = 150) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function getQuotations(): Promise<Quotation[]> {
-  await delay(350);
+  if (!USE_MOCK_DATA) {
+    try {
+      const res = await apiClient.get<{ success: boolean; data: Quotation[] }>('/quotations');
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        return res.data.data;
+      }
+    } catch (err) {
+      console.warn('[quotationService] API getQuotations failed, falling back to local store:', err);
+    }
+  }
+  await delay(150);
   return [...quotations];
 }
 
 export async function getQuotationById(id: string): Promise<Quotation | null> {
-  await delay(200);
+  if (!USE_MOCK_DATA) {
+    try {
+      const res = await apiClient.get<{ success: boolean; data: Quotation }>(`/quotations/${id}`);
+      if (res.data?.success && res.data.data) {
+        return res.data.data;
+      }
+    } catch (err) {
+      console.warn('[quotationService] API getQuotationById failed, falling back to local store:', err);
+    }
+  }
+  await delay(100);
   const quote = quotations.find((q) => q.id === id);
   return quote ? { ...quote } : null;
 }
 
 export async function addQuotation(data: QuotationFormData): Promise<Quotation> {
-  await delay(350);
+  if (!USE_MOCK_DATA) {
+    try {
+      const res = await apiClient.post<{ success: boolean; data: Quotation }>('/quotations', data);
+      if (res.data?.success && res.data.data) {
+        return res.data.data;
+      }
+    } catch (err) {
+      console.warn('[quotationService] API addQuotation failed, falling back to local store:', err);
+    }
+  }
+
+  await delay(200);
   const customer = customers.find((c) => c.id === data.customerId);
   const bomItems = calculateBOM(data.capacityKW, data.systemType);
   const gstPercent = data.gstPercent ?? 12;
@@ -59,68 +93,102 @@ export async function addQuotation(data: QuotationFormData): Promise<Quotation> 
     advancePaid,
     balanceAmount,
     status: 'DRAFT',
-    validUntil: data.validUntil,
+    validUntil: data.validUntil || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    termsAndConditions: data.termsAndConditions || 'Standard 5-year solar warranty on workmanship and 25-year panel performance guarantee.',
     notes: data.notes || '',
-    termsConditions:
-      '1. Validity of this quotation is 30 days from issue.\n2. 25% Advance payment required along with order confirmation.\n3. Delivery within 14 working days post DISCOM feasibility approval.\n4. PM Surya Ghar subsidy subject to central portal verification.',
-    createdBy: 'Sales Desk',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
 
   dbAddQuotation(newQuotation);
-  return { ...newQuotation };
+  return newQuotation;
 }
 
-export async function updateQuotationStatus(
-  id: string,
-  status: QuotationStatus
-): Promise<Quotation> {
-  await delay(350);
+export async function updateQuotationStatus(id: string, status: QuotationStatus): Promise<Quotation | null> {
+  if (!USE_MOCK_DATA && status === 'ACCEPTED') {
+    try {
+      await apiClient.post(`/quotations/${id}/confirm-order`, {});
+    } catch (err) {
+      console.warn('[quotationService] API confirmOrder failed, falling back to local store:', err);
+    }
+  }
+
+  await delay(150);
   const updated = dbUpdateQuotation(id, { status });
-  if (!updated) {
-    throw new Error(`Quotation with id "${id}" not found`);
-  }
-  return { ...updated };
+  return updated || null;
 }
 
-export async function convertToOrder(
-  quotationId: string
-): Promise<{ quotation: Quotation; order: Order }> {
-  await delay(350);
-  const quote = quotations.find((q) => q.id === quotationId);
-  if (!quote) {
-    throw new Error(`Quotation with id "${quotationId}" not found`);
+export async function createOrderFromQuotation(quotationId: string, advancePaid: number = 0): Promise<Order | null> {
+  if (!USE_MOCK_DATA) {
+    try {
+      const res = await apiClient.post<{ success: boolean; order: Order }>(`/quotations/${quotationId}/confirm-order`, {
+        advanceReceived: advancePaid,
+      });
+      if (res.data?.success && res.data.order) {
+        return res.data.order;
+      }
+    } catch (err) {
+      console.warn('[quotationService] API createOrderFromQuotation failed, falling back to local store:', err);
+    }
   }
 
-  const updatedQuote = dbUpdateQuotation(quotationId, {
-    status: 'CONVERTED_TO_ORDER',
-  });
+  await delay(200);
+  const quote = quotations.find((q) => q.id === quotationId);
+  if (!quote) return null;
 
-  const orderNumberSuffix = String(orders.length + 45).padStart(4, '0');
+  const count = orders.length + 1;
   const newOrder: Order = {
     id: `ord-${Date.now()}`,
-    orderNumber: `ORD-2026-${orderNumberSuffix}`,
+    orderNumber: `ORD-2026-${String(count).padStart(3, '0')}`,
     quotationId: quote.id,
     customerId: quote.customerId,
     customerName: quote.customerName,
     capacityKW: quote.capacityKW,
-    systemType: quote.systemType,
     totalAmount: quote.totalAmount,
-    advancePaid: quote.advancePaid,
-    balanceAmount: quote.balanceAmount,
-    status: quote.advancePaid > 0 ? 'ADVANCE_RECEIVED' : 'CONFIRMED',
-    assignedTechnicianIds: [],
+    advanceReceived: advancePaid,
+    balanceDue: quote.totalAmount - advancePaid,
+    paymentStatus: advancePaid >= quote.totalAmount ? 'PAID' : advancePaid > 0 ? 'PARTIALLY_PAID' : 'UNPAID',
+    stage: 'ORDER_CONFIRMED',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
 
-  orders.unshift(newOrder);
+  dbAddOrder(newOrder);
+  dbUpdateQuotation(quotationId, { status: 'ACCEPTED' });
+  dbUpdateCustomer(quote.customerId, { status: 'CONVERTED' });
 
-  return {
-    quotation: { ...updatedQuote! },
-    order: { ...newOrder },
-  };
+  return newOrder;
+}
+
+export async function getOrders(): Promise<Order[]> {
+  if (!USE_MOCK_DATA) {
+    try {
+      const res = await apiClient.get<{ success: boolean; data: Order[] }>('/quotations/orders/list');
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        return res.data.data;
+      }
+    } catch (err) {
+      console.warn('[quotationService] API getOrders failed, falling back to local store:', err);
+    }
+  }
+  await delay(150);
+  return [...orders];
+}
+
+export async function getOrderById(id: string): Promise<Order | null> {
+  if (!USE_MOCK_DATA) {
+    try {
+      const res = await apiClient.get<{ success: boolean; data: Order }>(`/quotations/orders/${id}`);
+      if (res.data?.success && res.data.data) {
+        return res.data.data;
+      }
+    } catch (err) {
+      console.warn('[quotationService] API getOrderById failed, falling back to local store:', err);
+    }
+  }
+  await delay(100);
+  const order = orders.find((o) => o.id === id);
+  return order ? { ...order } : null;
 }
 
 export async function getCustomers(): Promise<Customer[]> {
@@ -138,7 +206,9 @@ export const quotationService = {
   getQuotationById,
   addQuotation,
   updateQuotationStatus,
-  convertToOrder,
+  createOrderFromQuotation,
+  getOrders,
+  getOrderById,
   getCustomers,
   getSurveys,
 };
