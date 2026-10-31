@@ -16,20 +16,24 @@ import { ServiceTicketsPage } from '../features/service/ServiceTicketsPage';
 import { FinancePage } from '../features/finance/FinancePage';
 import { ReportsPage } from '../features/reports/ReportsPage';
 import { UserManagementPage } from '../features/admin/UserManagementPage';
+import { RouteErrorBoundary } from '../components/common/RouteErrorBoundary';
 
 export const router = createBrowserRouter([
   // Public Authentication Portals
   {
     path: '/login',
     element: <LoginPage />,
+    errorElement: <RouteErrorBoundary />,
   },
   {
     path: '/admin/login',
     element: <AdminLoginPage />,
+    errorElement: <RouteErrorBoundary />,
   },
   {
     path: '/register',
     element: <RegisterPage />,
+    errorElement: <RouteErrorBoundary />,
   },
 
   // Authenticated Enterprise Application Shell
@@ -40,6 +44,7 @@ export const router = createBrowserRouter([
         <AppShell />
       </ProtectedRoute>
     ),
+    errorElement: <RouteErrorBoundary />,
     children: [
       {
         index: true,

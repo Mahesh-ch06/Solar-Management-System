@@ -164,10 +164,11 @@ export const dashboardService = {
     }
 
     // 3. Derive Dynamic Recent Activities from actual database state
+    const now = Date.now();
     const dynamicActivities: RecentActivity[] = [
       {
         id: 'act-01',
-        timestamp: 'Just now',
+        timestamp: new Date(now - 2 * 60 * 1000).toISOString(),
         type: 'INSTALLATION',
         title: `Installation Progress Updated`,
         description: `${installationJobs[0]?.customerName || 'Customer'} rooftop mounting verified on-site.`,
@@ -176,7 +177,7 @@ export const dashboardService = {
       },
       {
         id: 'act-02',
-        timestamp: '15 mins ago',
+        timestamp: new Date(now - 15 * 60 * 1000).toISOString(),
         type: 'ENQUIRY',
         title: `New Solar Inquiry Registered`,
         description: `${customers[0]?.name || 'Rajesh Malhotra'} requested ${customers[0]?.requiredCapacityKW || 5} kW system proposal.`,
@@ -185,7 +186,7 @@ export const dashboardService = {
       },
       {
         id: 'act-03',
-        timestamp: '1 hour ago',
+        timestamp: new Date(now - 60 * 60 * 1000).toISOString(),
         type: 'DISPATCH',
         title: `Serial Numbers Scanned for Dispatch`,
         description: `Kit prepared for ${dispatchOrders[0]?.customerName || 'Sunita Sharma'} (${dispatchOrders[0]?.dispatchNumber || 'DSP-01'}).`,
@@ -194,7 +195,7 @@ export const dashboardService = {
       },
       {
         id: 'act-04',
-        timestamp: '2 hours ago',
+        timestamp: new Date(now - 2 * 60 * 60 * 1000).toISOString(),
         type: 'SERVICE',
         title: `Service Complaint Ticket Logged`,
         description: `Ticket ${serviceTickets[0]?.ticketNumber || 'TKT-01'} logged for ${serviceTickets[0]?.customerName || 'Amitabh Sen'}.`,
