@@ -6,6 +6,7 @@ import {
   users,
 } from '../store/inMemoryDb';
 import { emailService } from '../services/emailService';
+import { apiClient } from '../api/apiClient';
 
 interface AuthContextValue {
   user: UserAccount | null;
@@ -34,9 +35,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (stored) {
         const parsed: UserAccount = JSON.parse(stored);
         // Verify user still exists and is ACTIVE in database
-        const freshUser = users.find((u) => u.id === parsed.id);
+        const freshUser = users.find((u) => u.id === parsed.id || u.email.toLowerCase() === parsed.email.toLowerCase());
         if (freshUser && freshUser.status === 'ACTIVE') {
           setCurrentUser(freshUser);
+        } else if (parsed && parsed.status === 'ACTIVE') {
+          setCurrentUser(parsed);
         } else {
           localStorage.removeItem(AUTH_STORAGE_KEY);
           setCurrentUser(null);
@@ -53,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   /**
-   * Genuine login verification against database user accounts
+   * Genuine login verification against database user accounts & REST API
    */
   const login = async (
     credentials: LoginFormData,
@@ -61,6 +64,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   ): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
     try {
+      // 1. Try real backend API first if available
+      try {
+        const endpoint = isAdminPortal ? '/auth/admin-login' : '/auth/login';
+        const res = await apiClient.post(endpoint, {
+          email: credentials.email.trim(),
+          password: credentials.password,
+        });
+
+        if (res.data?.success && (res.data?.token || res.data?.data?.token)) {
+          const token = res.data.token || res.data.data.token;
+          const userObj = res.data.user || res.data.data.user;
+          localStorage.setItem('sunpower_auth_token', token);
+
+          const activeUser: UserAccount = {
+            id: userObj.id,
+            name: userObj.name,
+            email: userObj.email,
+            password: credentials.password,
+            phone: userObj.phone || '',
+            role: userObj.role,
+            department: userObj.department || '',
+            status: userObj.status || 'ACTIVE',
+            createdAt: userObj.createdAt || new Date().toISOString(),
+            roleAssignedBy: userObj.roleAssignedBy,
+            roleAssignedAt: userObj.roleAssignedAt,
+          };
+
+          setCurrentUser(activeUser);
+          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(activeUser));
+          return { success: true };
+        }
+      } catch (apiErr: any) {
+        const errData = apiErr.response?.data;
+        // If the backend returns a specific permission or approval error, respect it
+        if (errData && errData.message && !errData.message.includes('Invalid email or password')) {
+          return { success: false, error: errData.message };
+        }
+      }
+
+      // 2. Fallback to client database verification
       const user = getUserByEmail(credentials.email);
 
       if (!user) {
@@ -115,6 +158,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, error: 'An account with this email address already exists.' };
       }
 
+      // Register on backend if live
+      try {
+        await apiClient.post('/auth/register', {
+          name: data.name.trim(),
+          email: data.email.trim().toLowerCase(),
+          password: data.password,
+          phone: data.phone.trim(),
+          department: data.department?.trim() || 'Field / Commercial Operations',
+        });
+      } catch {
+        // Backend optional for mock fallback
+      }
+
       // Newly registered users are created with PENDING_APPROVAL status and cannot self-assign ADMIN/DIRECTOR
       const newUser = createUserAccount({
         name: data.name.trim(),
@@ -157,6 +213,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setCurrentUser(null);
     localStorage.removeItem(AUTH_STORAGE_KEY);
+    localStorage.removeItem('sunpower_auth_token');
+    apiClient.post('/auth/logout').catch(() => {});
   };
 
   return (

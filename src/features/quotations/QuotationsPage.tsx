@@ -207,14 +207,14 @@ export const QuotationsPage: React.FC = () => {
                   onClick={() => setActiveTab(tab.id)}
                   className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${
                     isActive
-                      ? 'bg-solar-800 text-white shadow-xs'
+                      ? 'bg-amber-500 text-slate-950 shadow-xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                   }`}
                 >
                   <span>{tab.label}</span>
                   <span
                     className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-                      isActive ? 'bg-solar-900/80 text-amber-300' : 'bg-slate-200 text-slate-600'
+                      isActive ? 'bg-amber-600/80 text-slate-950 font-extrabold' : 'bg-slate-200 text-slate-600'
                     }`}
                   >
                     {tab.count}

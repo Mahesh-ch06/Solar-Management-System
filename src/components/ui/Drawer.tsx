@@ -50,13 +50,13 @@ export const Drawer: React.FC<DrawerProps> = ({
     <div className="fixed inset-0 z-50 flex justify-end">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px]"
+        className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs"
         onClick={onClose}
       />
       {/* Drawer panel */}
       <div
         className={cn(
-          'relative w-full bg-white shadow-2xl flex flex-col animate-slide-left',
+          'relative w-full bg-white border-l border-slate-200 shadow-2xl flex flex-col animate-slide-left text-slate-900',
           widthClasses[width],
           className
         )}
@@ -71,7 +71,7 @@ export const Drawer: React.FC<DrawerProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors mt-0.5"
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors mt-0.5 cursor-pointer"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

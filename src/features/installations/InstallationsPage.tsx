@@ -137,9 +137,9 @@ export const InstallationsPage: React.FC = () => {
             <button
               key={tab.key}
               onClick={() => setActiveFilter(tab.key)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
                 activeFilter === tab.key
-                  ? 'bg-solar-800 text-white border-solar-800 shadow-xs'
+                  ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-xs'
                   : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
               }`}
             >
@@ -318,7 +318,7 @@ export const InstallationsPage: React.FC = () => {
             {/* Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-solar-800 text-amber-400 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center shadow-xs">
                   <Sun className="w-4 h-4" />
                 </div>
                 <div>

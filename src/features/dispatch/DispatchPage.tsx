@@ -291,7 +291,7 @@ export const DispatchPage: React.FC = () => {
               onClick={() => setActiveTab(tab.value)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
                 activeTab === tab.value
-                  ? 'bg-solar-800 text-white shadow-xs'
+                  ? 'bg-amber-500 text-slate-950 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
@@ -300,7 +300,7 @@ export const DispatchPage: React.FC = () => {
                 <span
                   className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
                     activeTab === tab.value
-                      ? 'bg-solar-900 text-white'
+                      ? 'bg-amber-600/80 text-slate-950 font-extrabold'
                       : 'bg-slate-200 text-slate-700'
                   }`}
                 >

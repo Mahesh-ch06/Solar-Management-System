@@ -355,9 +355,9 @@ export const SurveysPage: React.FC = () => {
                 key={pill.id}
                 onClick={() => setSelectedStatus(pill.id)}
                 className={cn(
-                  'px-3 py-1 text-xs font-medium rounded-full transition-all shrink-0 cursor-pointer flex items-center gap-1.5',
+                  'px-3 py-1 text-xs font-semibold rounded-full transition-all shrink-0 cursor-pointer flex items-center gap-1.5',
                   isSelected
-                    ? 'bg-solar-800 text-white shadow-xs'
+                    ? 'bg-amber-500 text-slate-950 shadow-xs'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 )}
               >
@@ -366,7 +366,7 @@ export const SurveysPage: React.FC = () => {
                   className={cn(
                     'text-[10px] px-1.5 py-0.2 rounded-full font-bold',
                     isSelected
-                      ? 'bg-solar-900/60 text-white'
+                      ? 'bg-amber-600/80 text-slate-950 font-extrabold'
                       : 'bg-slate-200 text-slate-700'
                   )}
                 >

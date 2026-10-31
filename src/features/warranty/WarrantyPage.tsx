@@ -262,7 +262,7 @@ export const WarrantyPage: React.FC = () => {
                 onClick={() => setSelectedStatus(tab)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap ${
                   selectedStatus === tab
-                    ? 'bg-solar-800 text-white shadow-xs'
+                    ? 'bg-amber-500 text-slate-950 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
@@ -278,7 +278,7 @@ export const WarrantyPage: React.FC = () => {
                 <span
                   className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
                     selectedStatus === tab
-                      ? 'bg-solar-900 text-white'
+                      ? 'bg-amber-600/80 text-slate-950'
                       : 'bg-slate-200 text-slate-700'
                   }`}
                 >
@@ -474,18 +474,18 @@ export const WarrantyPage: React.FC = () => {
             </div>
 
             {/* Serial Barcode Tag */}
-            <div className="bg-slate-900 text-white rounded-xl p-4 space-y-2">
-              <span className="text-[10px] text-slate-400 uppercase tracking-widest block font-mono">
+            <div className="bg-slate-50 border border-slate-200 text-slate-900 rounded-xl p-4 space-y-2">
+              <span className="text-[10px] text-slate-500 uppercase tracking-widest block font-mono font-bold">
                 Component Hardware Identity (UID)
               </span>
-              <p className="text-xl font-mono font-bold tracking-wider text-solar-400">
+              <p className="text-xl font-mono font-bold tracking-wider text-amber-700">
                 {selectedRecord.serialNumber}
               </p>
-              <div className="h-6 w-full flex items-center gap-1 opacity-70 overflow-hidden">
+              <div className="h-6 w-full flex items-center gap-1 opacity-80 overflow-hidden">
                 {Array.from({ length: 48 }).map((_, i) => (
                   <span
                     key={i}
-                    className={`bg-white h-full ${i % 3 === 0 ? 'w-1' : i % 2 === 0 ? 'w-0.5' : 'w-1.5'}`}
+                    className={`bg-slate-800 h-full ${i % 3 === 0 ? 'w-1' : i % 2 === 0 ? 'w-0.5' : 'w-1.5'}`}
                   />
                 ))}
               </div>

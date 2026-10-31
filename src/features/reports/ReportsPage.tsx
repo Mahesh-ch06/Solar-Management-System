@@ -105,7 +105,7 @@ export const ReportsPage: React.FC = () => {
                 onClick={() => setSelectedPeriod(p.key as typeof selectedPeriod)}
                 className={`px-3 py-1.5 rounded-md transition-colors ${
                   selectedPeriod === p.key
-                    ? 'bg-solar-800 text-white font-semibold shadow-xs'
+                    ? 'bg-amber-500 text-slate-950 font-bold shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >

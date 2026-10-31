@@ -19,28 +19,28 @@ export interface StatCardProps {
 
 const accentStyles = {
   solar: {
-    iconBg: 'bg-solar-100 text-solar-800',
-    border: 'hover:border-solar-300',
+    iconBg: 'bg-amber-50 text-amber-700 border border-amber-200',
+    cardBorder: 'border-l-4 border-l-amber-500',
   },
   emerald: {
-    iconBg: 'bg-emerald-100 text-emerald-800',
-    border: 'hover:border-emerald-300',
+    iconBg: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+    cardBorder: 'border-l-4 border-l-emerald-500',
   },
   amber: {
-    iconBg: 'bg-amber-100 text-amber-800',
-    border: 'hover:border-amber-300',
+    iconBg: 'bg-amber-50 text-amber-700 border border-amber-200',
+    cardBorder: 'border-l-4 border-l-amber-500',
   },
   rose: {
-    iconBg: 'bg-rose-100 text-rose-800',
-    border: 'hover:border-rose-300',
+    iconBg: 'bg-rose-50 text-rose-700 border border-rose-200',
+    cardBorder: 'border-l-4 border-l-rose-500',
   },
   sky: {
-    iconBg: 'bg-sky-100 text-sky-800',
-    border: 'hover:border-sky-300',
+    iconBg: 'bg-sky-50 text-sky-700 border border-sky-200',
+    cardBorder: 'border-l-4 border-l-sky-500',
   },
   purple: {
-    iconBg: 'bg-purple-100 text-purple-800',
-    border: 'hover:border-purple-300',
+    iconBg: 'bg-purple-50 text-purple-700 border border-purple-200',
+    cardBorder: 'border-l-4 border-l-purple-500',
   },
 };
 
@@ -60,15 +60,15 @@ export const StatCard: React.FC<StatCardProps> = ({
       hoverable
       onClick={onClick}
       className={cn(
-        'p-5 transition-all duration-200 cursor-default',
-        styles.border,
-        onClick && 'cursor-pointer'
+        'p-5 transition-all duration-200 cursor-default bg-white border-slate-200 shadow-xs hover:shadow-sm',
+        styles.cardBorder,
+        onClick && 'cursor-pointer hover:border-slate-300'
       )}
     >
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">{title}</p>
-          <h4 className="text-2xl font-bold text-slate-900 mt-1 tracking-tight">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{title}</p>
+          <h4 className="text-2xl font-bold text-slate-900 mt-1.5 tracking-tight font-mono">
             {value}
           </h4>
         </div>
@@ -83,7 +83,7 @@ export const StatCard: React.FC<StatCardProps> = ({
             <div className="flex items-center gap-1 font-semibold">
               <span
                 className={cn(
-                  'inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[11px]',
+                  'inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[11px] font-medium',
                   trend.value >= 0
                     ? 'bg-emerald-50 text-emerald-700'
                     : 'bg-rose-50 text-rose-700'

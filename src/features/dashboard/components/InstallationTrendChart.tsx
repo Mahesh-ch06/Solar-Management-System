@@ -47,15 +47,15 @@ export const InstallationTrendChart: React.FC<InstallationTrendChartProps> = ({ 
               content={({ active, payload, label }) => {
                 if (active && payload && payload.length) {
                   return (
-                    <div className="bg-navy-950 text-white p-3 rounded-xl shadow-xl text-xs space-y-1.5 border border-navy-800">
-                      <p className="font-bold text-amber-400">{label} Performance</p>
+                    <div className="bg-white text-slate-900 p-3 rounded-xl shadow-xl text-xs space-y-1.5 border border-slate-200 ring-1 ring-slate-900/5">
+                      <p className="font-bold text-amber-600">{label} Performance</p>
                       <div className="flex items-center justify-between gap-4">
-                        <span className="text-slate-300">Planned:</span>
-                        <span className="font-semibold">{payload[0]?.value} sites</span>
+                        <span className="text-slate-500">Planned:</span>
+                        <span className="font-semibold text-slate-800">{payload[0]?.value} sites</span>
                       </div>
                       <div className="flex items-center justify-between gap-4">
-                        <span className="text-slate-300">Completed:</span>
-                        <span className="font-semibold text-solar-400">{payload[1]?.value} sites</span>
+                        <span className="text-slate-500">Completed:</span>
+                        <span className="font-semibold text-amber-600">{payload[1]?.value} sites</span>
                       </div>
                     </div>
                   );
@@ -72,14 +72,14 @@ export const InstallationTrendChart: React.FC<InstallationTrendChartProps> = ({ 
             <Bar
               dataKey="planned"
               name="Planned Installations"
-              fill="#94a3b8"
+              fill="#cbd5e1"
               radius={[4, 4, 0, 0]}
               barSize={18}
             />
             <Bar
               dataKey="completed"
               name="Completed Sites"
-              fill="#166534"
+              fill="#f59e0b"
               radius={[4, 4, 0, 0]}
               barSize={18}
             />

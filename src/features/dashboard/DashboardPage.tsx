@@ -51,18 +51,18 @@ export const DashboardPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Executive Command Header */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl px-6 py-5 text-white shadow-sm">
+      <div className="bg-white border border-slate-200 rounded-2xl px-6 py-5 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-solar-400">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-600">
                 Operations Command Center
               </span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
               Rooftop Solar Performance Dashboard
             </h1>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5">
               Live telemetry for customer inquiries, rooftop installations, equipment dispatch & after-sales service.
             </p>
           </div>
@@ -77,7 +77,6 @@ export const DashboardPage: React.FC = () => {
               }}
               isLoading={isFetching && !isLoading}
               leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
-              className="bg-slate-800 border-slate-700 text-white hover:bg-slate-700"
             >
               Sync
             </Button>
@@ -93,7 +92,7 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         {/* Quick access links with dynamic counts */}
-        <div className="flex flex-wrap gap-2 mt-4 pt-3.5 border-t border-slate-800">
+        <div className="flex flex-wrap gap-2 mt-4 pt-3.5 border-t border-slate-100">
           {[
             { label: `${data?.kpis.totalEnquiries.value || 8} Active Enquiries`, path: '/customers' },
             { label: `${data?.kpis.pendingQuotations.value || 2} Pending Quotations`, path: '/quotations' },
@@ -104,7 +103,7 @@ export const DashboardPage: React.FC = () => {
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className="text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 flex items-center gap-1.5 transition-colors"
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <span>{item.label}</span>
               <ArrowRight className="w-3 h-3 text-slate-400" />

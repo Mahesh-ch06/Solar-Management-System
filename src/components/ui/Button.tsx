@@ -12,17 +12,17 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 const variantStyles: Record<string, string> = {
   primary:
-    'bg-solar-800 text-white hover:bg-solar-900 active:bg-solar-950 shadow-sm focus:ring-solar-500/30 border border-transparent',
+    'bg-[#f59e0b] text-slate-950 font-semibold hover:bg-[#d97706] active:bg-[#b45309] shadow-xs focus:ring-[#f59e0b]/40 border border-transparent',
   secondary:
-    'bg-navy-900 text-white hover:bg-navy-800 active:bg-navy-950 shadow-sm focus:ring-navy-400/30 border border-transparent',
+    'bg-slate-100 text-slate-800 font-semibold hover:bg-slate-200 active:bg-slate-300 shadow-xs focus:ring-slate-400/20 border border-slate-200',
   outline:
-    'bg-white text-slate-700 hover:bg-slate-50 active:bg-slate-100 border border-slate-300 shadow-xs focus:ring-slate-400/20',
+    'bg-white text-slate-700 font-medium hover:bg-slate-50 active:bg-slate-100 border border-slate-300 shadow-xs focus:ring-slate-400/20',
   ghost:
-    'bg-transparent text-slate-600 hover:bg-slate-100 active:bg-slate-200 focus:ring-slate-400/20 border border-transparent',
+    'bg-transparent text-slate-600 font-medium hover:bg-slate-100 active:bg-slate-200 hover:text-slate-900 focus:ring-slate-400/20 border border-transparent',
   danger:
-    'bg-rose-600 text-white hover:bg-rose-700 active:bg-rose-800 shadow-sm focus:ring-rose-500/30 border border-transparent',
+    'bg-rose-600 text-white font-medium hover:bg-rose-700 active:bg-rose-800 shadow-xs focus:ring-rose-500/30 border border-transparent',
   amber:
-    'bg-amber-500 text-slate-950 font-semibold hover:bg-amber-400 active:bg-amber-600 shadow-sm focus:ring-amber-500/30 border border-transparent',
+    'bg-[#f59e0b] text-slate-950 font-semibold hover:bg-[#d97706] active:bg-[#b45309] shadow-xs focus:ring-[#f59e0b]/40 border border-transparent',
 };
 
 const sizeStyles: Record<string, string> = {

@@ -100,7 +100,7 @@ export const FilterTabs: React.FC<FilterTabProps> = ({ tabs, active, onChange, c
         className={cn(
           'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-150',
           active === tab.key
-            ? 'bg-solar-800 text-white border-solar-800 shadow-sm'
+            ? 'bg-amber-500 text-slate-950 font-bold border-amber-500 shadow-xs'
             : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:text-slate-800'
         )}
       >
@@ -109,7 +109,7 @@ export const FilterTabs: React.FC<FilterTabProps> = ({ tabs, active, onChange, c
           <span
             className={cn(
               'text-[10px] font-bold rounded-full px-1.5 py-0.5',
-              active === tab.key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+              active === tab.key ? 'bg-amber-600/80 text-slate-950 font-extrabold' : 'bg-slate-100 text-slate-600'
             )}
           >
             {tab.count}

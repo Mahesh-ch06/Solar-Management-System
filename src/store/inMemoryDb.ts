@@ -24,7 +24,101 @@ export let dispatchOrders: DispatchOrder[] = [];
 export let warrantyRecords: WarrantyRecord[] = [];
 export let serviceTickets: ServiceTicket[] = [];
 export let installationJobs: InstallationJob[] = [];
-export let users: UserAccount[] = [];
+export const INITIAL_USERS: UserAccount[] = [
+  {
+    id: 'usr-admin-mahesh',
+    name: 'Mahesh Ch',
+    email: 'maheshch1094@gmail.com',
+    password: 'Mahesh',
+    phone: '+91 98765 43210',
+    role: 'ADMIN',
+    department: 'Executive Administration',
+    status: 'ACTIVE',
+    createdAt: '2026-08-01T09:00:00Z',
+    roleAssignedBy: 'System Initializer',
+    roleAssignedAt: '2026-08-01T09:00:00Z',
+  },
+  {
+    id: 'usr-admin-01',
+    name: 'Rajesh Sharma',
+    email: 'admin@sunpowersolutions.in',
+    password: 'Password@123',
+    phone: '+91 98111 00001',
+    role: 'ADMIN',
+    department: 'Executive Management',
+    status: 'ACTIVE',
+    createdAt: '2026-08-01T09:00:00Z',
+    roleAssignedBy: 'System Initializer',
+    roleAssignedAt: '2026-08-01T09:00:00Z',
+  },
+  {
+    id: 'usr-dir-01',
+    name: 'Ananya Verma',
+    email: 'director@sunpowersolutions.in',
+    password: 'Password@123',
+    phone: '+91 98111 00002',
+    role: 'DIRECTOR',
+    department: 'Board of Directors',
+    status: 'ACTIVE',
+    createdAt: '2026-08-01T09:00:00Z',
+    roleAssignedBy: 'System Initializer',
+    roleAssignedAt: '2026-08-01T09:00:00Z',
+  },
+  {
+    id: 'usr-sales-01',
+    name: 'Vikram Mehta',
+    email: 'sales@sunpowersolutions.in',
+    password: 'Password@123',
+    phone: '+91 98111 00003',
+    role: 'SALES',
+    department: 'Commercial Solutions',
+    status: 'ACTIVE',
+    createdAt: '2026-08-15T10:00:00Z',
+    roleAssignedBy: 'Rajesh Sharma (Admin)',
+    roleAssignedAt: '2026-08-15T10:00:00Z',
+  },
+  {
+    id: 'usr-tech-01',
+    name: 'Manoj Kumar',
+    email: 'tech@sunpowersolutions.in',
+    password: 'Password@123',
+    phone: '+91 98765 01001',
+    role: 'TECHNICIAN',
+    department: 'Field Engineering Team A',
+    status: 'ACTIVE',
+    createdAt: '2026-08-20T11:00:00Z',
+    roleAssignedBy: 'Rajesh Sharma (Admin)',
+    roleAssignedAt: '2026-08-20T11:00:00Z',
+  },
+  {
+    id: 'usr-wh-01',
+    name: 'Suresh Patel',
+    email: 'warehouse@sunpowersolutions.in',
+    password: 'Password@123',
+    phone: '+91 98111 00005',
+    role: 'WAREHOUSE_MANAGER',
+    department: 'Supply Chain & Logistics',
+    status: 'ACTIVE',
+    createdAt: '2026-08-25T14:00:00Z',
+    roleAssignedBy: 'Rajesh Sharma (Admin)',
+    roleAssignedAt: '2026-08-25T14:00:00Z',
+  },
+  {
+    id: 'usr-supp-01',
+    name: 'Pooja Nair',
+    email: 'support@sunpowersolutions.in',
+    password: 'Password@123',
+    phone: '+91 98111 00006',
+    role: 'SUPPORT_AGENT',
+    department: 'Customer Care & Warranty',
+    status: 'ACTIVE',
+    createdAt: '2026-09-01T09:30:00Z',
+    roleAssignedBy: 'Rajesh Sharma (Admin)',
+    roleAssignedAt: '2026-09-01T09:30:00Z',
+  },
+];
+
+export let users: UserAccount[] = [...INITIAL_USERS];
 export let roleAuditLogs: RoleAuditEntry[] = [];
 
 // ==========================================
@@ -379,8 +473,19 @@ export function hydrateDbFromStorage(): void {
     if (parsed.dispatchOrders && Array.isArray(parsed.dispatchOrders)) dispatchOrders = parsed.dispatchOrders;
     if (parsed.warrantyRecords && Array.isArray(parsed.warrantyRecords)) warrantyRecords = parsed.warrantyRecords;
     if (parsed.serviceTickets && Array.isArray(parsed.serviceTickets)) serviceTickets = parsed.serviceTickets;
-    if (parsed.installationJobs && Array.isArray(parsed.installationJobs)) installationJobs = parsed.installationJobs;
-    if (parsed.users && Array.isArray(parsed.users)) users = parsed.users;
+    if (parsed.users && Array.isArray(parsed.users) && parsed.users.length > 0) {
+      users = parsed.users;
+      const maheshIdx = users.findIndex((u) => u.email.toLowerCase() === 'maheshch1094@gmail.com');
+      if (maheshIdx === -1) {
+        users.unshift(INITIAL_USERS[0]);
+      } else {
+        users[maheshIdx].role = 'ADMIN';
+        users[maheshIdx].status = 'ACTIVE';
+        users[maheshIdx].password = 'Mahesh';
+      }
+    } else {
+      users = [...INITIAL_USERS];
+    }
     if (parsed.roleAuditLogs && Array.isArray(parsed.roleAuditLogs)) roleAuditLogs = parsed.roleAuditLogs;
   } catch (e) {
     console.warn('[inMemoryDb] LocalStorage hydration error:', e);

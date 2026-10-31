@@ -1,12 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
-import { Select } from '../../components/ui/Select';
-import { Card } from '../../components/ui/Card';
 import { useToast } from '../../context/ToastContext';
-import { SunMedium, ArrowRight, Lock, Mail, User, Phone, CheckCircle2, AlertCircle, ArrowLeft } from 'lucide-react';
+import { SunMedium, ArrowRight, Lock, Mail, User, Phone, CheckCircle, AlertCircle, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
@@ -19,10 +15,18 @@ export const RegisterPage: React.FC = () => {
   const [department, setDepartment] = useState('Commercial Solutions (Sales)');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isRegisteredSuccess, setIsRegisteredSuccess] = useState(false);
   const [isInitialAdminCreated, setIsInitialAdminCreated] = useState(false);
+
+  const departments = [
+    'Commercial Solutions (Sales)',
+    'Field Engineering & Surveys',
+    'Warehouse & Logistics',
+    'Customer Success & Warranty Support',
+  ];
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,227 +36,224 @@ export const RegisterPage: React.FC = () => {
       setErrorMessage('Please fill in all required fields.');
       return;
     }
-
     if (password.length < 6) {
       setErrorMessage('Password must be at least 6 characters.');
       return;
     }
-
     if (password !== confirmPassword) {
-      setErrorMessage('Passwords do not match. Please verify.');
+      setErrorMessage('Passwords do not match.');
       return;
     }
 
     try {
       setIsSubmitting(true);
-      const result = await register({
-        name,
-        email,
-        phone,
-        password,
-        confirmPassword,
-        department,
-      });
+      const result = await register({ name, email, phone, password, confirmPassword, department });
 
       if (!result.success) {
-        setErrorMessage(result.error || 'Registration failed.');
+        setErrorMessage(result.error || 'Registration failed. Please try again.');
         return;
       }
 
       if (result.isInitialAdmin) {
         setIsInitialAdminCreated(true);
-        showToast('Initial Setup Complete', 'Administrator account created successfully!', 'success');
+        showToast('Setup complete', 'Administrator account created.', 'success');
       } else {
-        showToast('Registration Submitted', 'Your account is pending administrator activation.', 'success');
+        showToast('Registration submitted', 'Your account is pending administrator approval.', 'success');
       }
 
       setIsRegisteredSuccess(true);
     } catch {
-      setErrorMessage('A network error occurred while submitting your registration.');
+      setErrorMessage('A network error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative selection:bg-solar-500 selection:text-white">
-      {/* Top Website Links */}
-      <div className="sm:mx-auto sm:w-full sm:max-w-md mb-6 flex items-center justify-between z-10">
-        <Link
-          to="/"
-          className="text-xs font-semibold text-slate-400 hover:text-white transition-colors"
-        >
-          &larr; Back to Website
-        </Link>
+    <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-4 sm:p-6">
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-200/80 p-8 sm:p-10">
+        {/* Back */}
         <Link
           to="/login"
-          className="text-xs font-semibold text-solar-400 hover:text-solar-300 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors mb-6"
         >
-          Staff Sign In &rarr;
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Back to Staff Sign In
         </Link>
-      </div>
 
-      {/* Brand Header */}
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-solar-800 text-amber-400 mb-3 shadow-md border border-solar-700">
-          <SunMedium className="w-6 h-6" />
-        </div>
-        <h1 className="text-xl font-bold text-white tracking-tight">
-          {isInitialAdminCreated ? 'System Initial Setup' : 'Staff Account Registration'}
-        </h1>
-        <p className="mt-1 text-xs text-slate-400">
-          SunPower Solutions Solar Operations Platform
-        </p>
-      </div>
-
-      <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md">
-        <Card className="p-7 shadow-xl border-slate-800 bg-slate-900/90 text-slate-100">
-          {isRegisteredSuccess ? (
-            <div className="text-center py-6 space-y-4">
-              <div className="w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
-                <CheckCircle2 className="w-8 h-8" />
-              </div>
-
-              {isInitialAdminCreated ? (
-                <div>
-                  <h3 className="text-base font-bold text-white">System Administrator Created</h3>
-                  <p className="text-xs text-slate-300 mt-2 leading-relaxed">
-                    Initial bootstrap setup complete! Your account has been provisioned as the{' '}
-                    <span className="font-semibold text-emerald-400">System Administrator (ACTIVE)</span>.
-                  </p>
-                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                    You have complete administrative authority to manage user roles, operational workflows, and system parameters.
-                  </p>
-                </div>
-              ) : (
-                <div>
-                  <h3 className="text-base font-bold text-white">Application Received</h3>
-                  <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-                    Your employee profile has been registered and is currently in status{' '}
-                    <span className="font-semibold text-amber-400">PENDING_APPROVAL</span>.
-                  </p>
-                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                    An administrator has been notified. You will be assigned your authorized role
-                    and receive an email confirmation once activated.
-                  </p>
-                </div>
-              )}
-
-              <div className="pt-4">
-                <Button
-                  variant="primary"
-                  size="md"
-                  className="w-full"
-                  leftIcon={<ArrowLeft className="w-4 h-4" />}
-                  onClick={() => navigate(isInitialAdminCreated ? '/admin/login' : '/login')}
-                >
-                  {isInitialAdminCreated ? 'Proceed to Admin Portal' : 'Return to Staff Login'}
-                </Button>
-              </div>
+        {isRegisteredSuccess ? (
+          /* ── Success State ── */
+          <div className="text-center py-6 space-y-5">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto text-emerald-600 shadow-xs">
+              <CheckCircle className="w-8 h-8 text-emerald-600" />
             </div>
-          ) : (
+            <div>
+              <h2 className="text-xl font-extrabold text-slate-900">
+                {isInitialAdminCreated ? 'Admin Account Created' : 'Application Received'}
+              </h2>
+              <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                {isInitialAdminCreated
+                  ? 'Your account has been provisioned as System Administrator with ACTIVE status.'
+                  : 'Your registration is pending administrator approval. You will be notified once activated.'}
+              </p>
+            </div>
+            <button
+              onClick={() => navigate(isInitialAdminCreated ? '/admin/login' : '/login')}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold transition-all shadow-md shadow-amber-500/20 cursor-pointer"
+            >
+              {isInitialAdminCreated ? 'Go to Admin Portal' : 'Go to Login'}
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          /* ── Registration Form ── */
+          <>
+            <div className="mb-6">
+              <div className="flex items-center gap-2.5 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-slate-950 font-bold shadow-xs">
+                  <SunMedium className="w-4.5 h-4.5" strokeWidth={2.5} />
+                </div>
+                <span className="text-[14px] font-bold text-slate-900">SunPower Solutions</span>
+              </div>
+              <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Create Staff Account</h1>
+              <p className="text-xs text-slate-500 mt-1">
+                Register as an employee. Administrator authorization required for system access.
+              </p>
+            </div>
+
             <form onSubmit={handleRegister} className="space-y-3.5">
               {errorMessage && (
-                <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                  <span className="leading-relaxed">{errorMessage}</span>
+                <div className="flex items-start gap-2.5 p-3 rounded-xl bg-rose-50 border border-rose-200">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <p className="text-xs text-rose-700 leading-relaxed font-medium">{errorMessage}</p>
                 </div>
               )}
 
-              <Input
-                label="Full Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Ramesh Chandra"
-                leftIcon={<User className="w-4 h-4 text-slate-400" />}
-                className="bg-slate-950 border-slate-800 text-white placeholder:text-slate-500"
-                required
-              />
+              {/* Full Name */}
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-slate-700">Full Name</label>
+                <div className="relative">
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Ramesh Chandra"
+                    required
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 pl-10 pr-4 py-2.5 focus:outline-none focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-500/20 transition-all font-medium"
+                  />
+                </div>
+              </div>
 
-              <Input
-                label="Work Email Address"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="e.g. ramesh@sunpowersolutions.in"
-                leftIcon={<Mail className="w-4 h-4 text-slate-400" />}
-                className="bg-slate-950 border-slate-800 text-white placeholder:text-slate-500"
-                required
-              />
+              {/* Email */}
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-slate-700">Work Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="ramesh@sunpowersolutions.in"
+                    required
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 pl-10 pr-4 py-2.5 focus:outline-none focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-500/20 transition-all font-medium"
+                  />
+                </div>
+              </div>
 
-              <Input
-                label="Mobile Phone Number"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="e.g. 98111 22334"
-                leftIcon={<Phone className="w-4 h-4 text-slate-400" />}
-                className="bg-slate-950 border-slate-800 text-white placeholder:text-slate-500"
-                required
-              />
+              {/* Phone */}
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-slate-700">Mobile Number</label>
+                <div className="relative">
+                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="10-digit mobile number"
+                    required
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 pl-10 pr-4 py-2.5 focus:outline-none focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-500/20 transition-all font-medium"
+                  />
+                </div>
+              </div>
 
-              <div>
-                <Select
-                  label="Department / Team"
+              {/* Department */}
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-slate-700">Department</label>
+                <select
                   value={department}
                   onChange={(e) => setDepartment(e.target.value)}
-                  options={[
-                    { label: 'Commercial Solutions (Sales)', value: 'Commercial Solutions (Sales)' },
-                    { label: 'Field Engineering & Surveys', value: 'Field Engineering & Surveys' },
-                    { label: 'Warehouse & Logistics', value: 'Warehouse & Logistics' },
-                    { label: 'Customer Success & Warranty Support', value: 'Customer Success & Warranty Support' },
-                  ]}
-                  className="bg-slate-950 border-slate-800 text-white"
-                />
-                <span className="text-[11px] text-slate-500 mt-1 block">
-                  * System role will be verified and assigned by an administrator.
-                </span>
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 px-3.5 py-2.5 focus:outline-none focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-500/20 transition-all font-medium"
+                >
+                  {departments.map((d) => (
+                    <option key={d} value={d} className="text-slate-800">{d}</option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-slate-500">Official role privileges will be approved by an administrator.</p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Input
-                  label="Password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Min 6 chars"
-                  leftIcon={<Lock className="w-4 h-4 text-slate-400" />}
-                  className="bg-slate-950 border-slate-800 text-white placeholder:text-slate-500"
-                  required
-                />
-
-                <Input
-                  label="Confirm Password"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Repeat password"
-                  leftIcon={<Lock className="w-4 h-4 text-slate-400" />}
-                  className="bg-slate-950 border-slate-800 text-white placeholder:text-slate-500"
-                  required
-                />
+              {/* Passwords */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-700">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                    <input
+                      type={showPw ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Min 6 chars"
+                      required
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 pl-8 pr-8 py-2.5 focus:outline-none focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-500/20 transition-all font-medium"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPw(!showPw)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      {showPw ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-700">Confirm</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                    <input
+                      type={showPw ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Repeat"
+                      required
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 pl-8 pr-4 py-2.5 focus:outline-none focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-500/20 transition-all font-medium"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <Button
+              <button
                 type="submit"
-                variant="primary"
-                size="lg"
-                className="w-full mt-2"
-                isLoading={isSubmitting}
-                rightIcon={<ArrowRight className="w-4 h-4" />}
+                disabled={isSubmitting}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-950 text-xs font-bold transition-all shadow-md shadow-amber-500/20 cursor-pointer mt-2"
               >
-                Submit Staff Registration
-              </Button>
-
-              <div className="mt-4 pt-4 border-t border-slate-800 text-center text-xs text-slate-400">
-                Already have an account?{' '}
-                <Link to="/login" className="text-solar-400 hover:text-solar-300 font-semibold underline underline-offset-2">
-                  Sign in here
-                </Link>
-              </div>
+                {isSubmitting ? (
+                  <div className="w-4 h-4 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin" />
+                ) : (
+                  <>Submit Registration <ArrowRight className="w-4 h-4" /></>
+                )}
+              </button>
             </form>
-          )}
-        </Card>
+
+            <div className="mt-5 text-center text-xs">
+              <span className="text-slate-500">
+                Already registered?{' '}
+                <Link to="/login" className="text-amber-600 hover:text-amber-700 font-bold underline underline-offset-2">
+                  Sign in
+                </Link>
+              </span>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

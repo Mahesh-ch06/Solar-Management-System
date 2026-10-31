@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
 import { useToast } from '../../context/ToastContext';
 import {
   customers,
@@ -185,22 +184,19 @@ export const CustomerAuthPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative selection:bg-solar-500 selection:text-white">
-      {/* Background Ambience */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-96 bg-gradient-to-b from-solar-500/10 via-amber-500/5 to-transparent blur-3xl pointer-events-none" />
-
+    <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative">
       {/* Top Bar / Back to Home */}
       <div className="sm:mx-auto sm:w-full sm:max-w-md mb-6 flex items-center justify-between z-10">
         <Link
           to="/"
-          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to SunPower Website</span>
         </Link>
         <Link
           to="/login"
-          className="text-xs font-semibold text-slate-500 hover:text-slate-300 transition-colors"
+          className="text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
         >
           Staff ERP Login &rarr;
         </Link>
@@ -208,32 +204,32 @@ export const CustomerAuthPage: React.FC = () => {
 
       {/* Brand Header */}
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center z-10">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-solar-500/10 text-solar-400 mb-3 shadow-md border border-solar-500/20">
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 mb-3 shadow-xs border border-amber-200">
           <SunMedium className="w-6 h-6 stroke-[2.5]" />
         </div>
-        <h1 className="text-2xl font-black text-white tracking-tight">
+        <h1 className="text-2xl font-black text-slate-900 tracking-tight">
           Customer Solar Portal
         </h1>
-        <p className="mt-1 text-xs text-slate-400">
+        <p className="mt-1 text-xs text-slate-500">
           Track PM Surya Ghar subsidy, site survey reports, DISCOM approvals & equipment warranties.
         </p>
       </div>
 
       {/* Main Authentication Card */}
       <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md z-10">
-        <Card className="bg-slate-900 border-slate-800 shadow-2xl overflow-hidden">
+        <Card className="bg-white border-slate-200 shadow-xl overflow-hidden rounded-3xl">
           {/* Tab Switcher */}
-          <div className="grid grid-cols-2 border-b border-slate-800 bg-slate-950/60 p-1">
+          <div className="grid grid-cols-2 border-b border-slate-200 bg-slate-50 p-1">
             <button
               type="button"
               onClick={() => {
                 setActiveTab('login');
                 setLoginError('');
               }}
-              className={`py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              className={`py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                 activeTab === 'login'
-                  ? 'bg-slate-800 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
+                  : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               Customer Sign In
@@ -244,10 +240,10 @@ export const CustomerAuthPage: React.FC = () => {
                 setActiveTab('register');
                 setRegisterError('');
               }}
-              className={`py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              className={`py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                 activeTab === 'register'
-                  ? 'bg-slate-800 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
+                  : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               Create Solar Account
@@ -259,75 +255,73 @@ export const CustomerAuthPage: React.FC = () => {
             {activeTab === 'login' && (
               <form onSubmit={handleLogin} className="space-y-4">
                 {loginError && (
-                  <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
+                  <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
                     {loginError}
                   </div>
                 )}
 
-                <div className="p-3 rounded-xl bg-solar-500/10 border border-solar-500/20 text-xs text-solar-300 space-y-1">
-                  <p className="font-semibold flex items-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4 text-solar-400" />
+                <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200 text-xs text-slate-700 space-y-1">
+                  <p className="font-bold text-amber-900 flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-amber-700" />
                     Instant Project Tracking
                   </p>
-                  <p className="text-[11px] text-slate-300">
+                  <p className="text-[11px] text-slate-600">
                     Sign in with the mobile phone number or email you used when booking your rooftop consultation.
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
                     Registered Mobile Number or Email *
                   </label>
                   <div className="relative">
-                    <Phone className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
                       required
                       value={loginPhoneOrEmail}
                       onChange={(e) => setLoginPhoneOrEmail(e.target.value)}
                       placeholder="e.g. 9811223344 or name@example.com"
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-solar-500"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-500/20 font-medium"
                     />
                   </div>
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-semibold text-slate-300">
+                    <label className="block text-xs font-bold text-slate-700">
                       Password or Portal PIN (Optional)
                     </label>
                     <span className="text-[10px] text-slate-400">Direct phone lookup enabled</span>
                   </div>
                   <div className="relative">
-                    <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type="password"
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
-                      placeholder="Leave blank for instant OTP-less mobile login"
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-solar-500"
+                      placeholder="Leave blank for instant mobile login"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-500/20 font-medium"
                     />
                   </div>
                 </div>
 
-                <Button
+                <button
                   type="submit"
-                  variant="primary"
-                  size="md"
-                  className="w-full mt-2 font-bold bg-solar-600 hover:bg-solar-500 text-white"
-                  isLoading={isLoginSubmitting}
-                  rightIcon={<ArrowRight className="w-4 h-4" />}
+                  disabled={isLoginSubmitting}
+                  className="w-full mt-2 font-bold bg-amber-500 hover:bg-amber-600 text-slate-950 py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
                 >
-                  Access My Solar Project
-                </Button>
+                  {isLoginSubmitting ? 'Accessing...' : 'Access My Solar Project'}
+                  <ArrowRight className="w-4 h-4" />
+                </button>
 
                 <div className="text-center pt-2">
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-500">
                     New to SunPower?{' '}
                     <button
                       type="button"
                       onClick={() => setActiveTab('register')}
-                      className="text-solar-400 font-semibold hover:underline"
+                      className="text-amber-600 font-bold hover:underline"
                     >
                       Apply for Rooftop Solar &rarr;
                     </button>
@@ -340,68 +334,68 @@ export const CustomerAuthPage: React.FC = () => {
             {activeTab === 'register' && (
               <form onSubmit={handleRegister} className="space-y-3.5">
                 {registerError && (
-                  <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
+                  <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
                     {registerError}
                   </div>
                 )}
 
-                <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300">
-                  <p className="font-semibold flex items-center gap-1.5">
-                    <Zap className="w-4 h-4 text-amber-400" />
+                <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 text-xs text-slate-700">
+                  <p className="font-bold text-amber-900 flex items-center gap-1.5">
+                    <Zap className="w-4 h-4 text-amber-600" />
                     PM Surya Ghar Subsidy Eligible
                   </p>
-                  <p className="text-[11px] text-slate-300 mt-0.5">
+                  <p className="text-[11px] text-slate-600 mt-0.5">
                     We will automatically size your rooftop system and prepare your DBT subsidy filing (up to ₹78,000).
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
                     Full Name (as per Electricity Bill) *
                   </label>
                   <div className="relative">
-                    <User className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="e.g. Ramesh Chandra Sharma"
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-solar-500"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-500/20 font-medium"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
                       Mobile Number *
                     </label>
                     <div className="relative">
-                      <Phone className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                       <input
                         type="tel"
                         required
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         placeholder="10-digit number"
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-solar-500"
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-500/20 font-medium"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
                       Email Address
                     </label>
                     <div className="relative">
-                      <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                       <input
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="name@email.com"
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-solar-500"
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-500/20 font-medium"
                       />
                     </div>
                   </div>
@@ -409,24 +403,24 @@ export const CustomerAuthPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
                       City / District *
                     </label>
                     <div className="relative">
-                      <MapPin className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                       <input
                         type="text"
                         required
                         value={city}
                         onChange={(e) => setCity(e.target.value)}
                         placeholder="e.g. Gurugram, Delhi, Noida"
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-solar-500"
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-500/20 font-medium"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
                       Monthly Electricity Bill (₹) *
                     </label>
                     <input
@@ -436,14 +430,14 @@ export const CustomerAuthPage: React.FC = () => {
                       value={monthlyBill}
                       onChange={(e) => setMonthlyBill(e.target.value)}
                       placeholder="e.g. 4500"
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-solar-500"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-500/20 font-medium"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
                       Installation Address & Landmark
                     </label>
                     <input
@@ -451,11 +445,11 @@ export const CustomerAuthPage: React.FC = () => {
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
                       placeholder="e.g. Sector 45, Near Cyber Park"
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-solar-500"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-500/20 font-medium"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
                       PIN Code
                     </label>
                     <input
@@ -464,20 +458,20 @@ export const CustomerAuthPage: React.FC = () => {
                       value={pinCode}
                       onChange={(e) => setPinCode(e.target.value)}
                       placeholder="e.g. 122001"
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-solar-500"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-500/20 font-medium"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
                       Desired Sizing
                     </label>
                     <select
                       value={capacity}
                       onChange={(e) => setCapacity(e.target.value as any)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-solar-500"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-amber-500 font-medium"
                     >
                       <option value="1-2kW">1-2 kW (Bill ₹1,500 - ₹3,000)</option>
                       <option value="3-4kW">3-4 kW (Bill ₹3,500 - ₹6,500)</option>
@@ -487,13 +481,13 @@ export const CustomerAuthPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
                       System Architecture
                     </label>
                     <select
                       value={systemType}
                       onChange={(e) => setSystemType(e.target.value as any)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-solar-500"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-amber-500 font-medium"
                     >
                       <option value="ON_GRID">On-Grid (Net Metering Subsidy)</option>
                       <option value="OFF_GRID">Off-Grid (Battery Energy Storage)</option>
@@ -502,44 +496,42 @@ export const CustomerAuthPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
                     Electricity CA / Consumer Number (Optional)
                   </label>
                   <div className="relative">
-                    <FileCheck className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <FileCheck className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
                       value={consumerNumber}
                       onChange={(e) => setConsumerNumber(e.target.value)}
                       placeholder="e.g. 1002349887 (found on electricity bill)"
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-solar-500"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-amber-500 focus:bg-white font-medium"
                     />
                   </div>
                 </div>
 
-                <div className="flex items-start gap-2 pt-1 text-[11px] text-slate-400">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <div className="flex items-start gap-2 pt-1 text-[11px] text-slate-600">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                   <span>I authorize SunPower Solutions to verify technical feasibility with my local DISCOM for PM Surya Ghar subsidy disbursement.</span>
                 </div>
 
-                <Button
+                <button
                   type="submit"
-                  variant="primary"
-                  size="md"
-                  className="w-full mt-2 font-bold bg-solar-600 hover:bg-solar-500 text-white"
-                  isLoading={isRegisterSubmitting}
-                  rightIcon={<ArrowRight className="w-4 h-4" />}
+                  disabled={isRegisterSubmitting}
+                  className="w-full mt-2 font-bold bg-amber-500 hover:bg-amber-600 text-slate-950 py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
                 >
-                  Submit & Open Solar Tracker
-                </Button>
+                  {isRegisterSubmitting ? 'Registering...' : 'Submit & Open Solar Tracker'}
+                  <ArrowRight className="w-4 h-4" />
+                </button>
 
                 <div className="text-center pt-1">
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-500">
                     Already registered?{' '}
                     <button
                       type="button"
                       onClick={() => setActiveTab('login')}
-                      className="text-solar-400 font-semibold hover:underline"
+                      className="text-amber-600 font-bold hover:underline"
                     >
                       Sign In &rarr;
                     </button>

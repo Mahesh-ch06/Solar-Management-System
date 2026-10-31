@@ -152,6 +152,7 @@ export const adminController = {
       return res.status(200).json({
         success: true,
         message: `User status updated to ${status}.`,
+        user: updatedUser,
         data: updatedUser,
         timestamp: new Date().toISOString(),
       });
@@ -249,6 +250,8 @@ export const adminController = {
       return res.status(200).json({
         success: true,
         message: `Role successfully updated from ${oldRole} to ${targetRole}.`,
+        user: updatedUser,
+        audit: auditRecord,
         data: {
           user: updatedUser,
           auditLog: auditRecord,

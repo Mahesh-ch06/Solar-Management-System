@@ -93,42 +93,42 @@ export const LeadCaptureForm: React.FC = () => {
   };
 
   return (
-    <Card className="bg-slate-900 border-slate-800 text-white p-6 sm:p-8 rounded-2xl shadow-xl">
+    <Card className="bg-white border-slate-200 text-slate-900 p-6 sm:p-10 rounded-3xl shadow-xl">
       {submittedLead ? (
         <div className="text-center py-6 space-y-4">
-          <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mx-auto">
+          <div className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto shadow-xs">
             <CheckCircle2 className="w-10 h-10" />
           </div>
 
-          <h3 className="text-xl font-bold text-white">Rooftop Survey Request Confirmed!</h3>
-          <p className="text-xs sm:text-sm text-slate-300 max-w-md mx-auto leading-relaxed">
-            Thank you, <strong className="text-white">{submittedLead.name}</strong>. Your solar application has been recorded in our central system.
+          <h3 className="text-xl font-bold text-slate-900">Rooftop Survey Request Confirmed!</h3>
+          <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
+            Thank you, <strong className="text-slate-900">{submittedLead.name}</strong>. Your solar application has been recorded in our central system.
           </p>
 
-          <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 max-w-sm mx-auto text-left space-y-2 text-xs">
-            <div className="flex justify-between text-slate-400">
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 max-w-sm mx-auto text-left space-y-2 text-xs">
+            <div className="flex justify-between text-slate-600">
               <span>Application Reference:</span>
-              <span className="font-mono font-bold text-amber-400">{submittedLead.id}</span>
+              <span className="font-mono font-bold text-amber-600">{submittedLead.id}</span>
             </div>
-            <div className="flex justify-between text-slate-400">
+            <div className="flex justify-between text-slate-600">
               <span>System Requested:</span>
-              <span className="font-semibold text-white">{submittedLead.requiredCapacityKW} kW ({submittedLead.systemType === 'ON_GRID' ? 'On-Grid' : 'Hybrid'})</span>
+              <span className="font-semibold text-slate-900">{submittedLead.requiredCapacityKW} kW ({submittedLead.systemType === 'ON_GRID' ? 'On-Grid' : 'Hybrid'})</span>
             </div>
-            <div className="flex justify-between text-slate-400">
+            <div className="flex justify-between text-slate-600">
               <span>Subsidy Guidance:</span>
-              <span className="font-semibold text-emerald-400">PM Surya Ghar (Included)</span>
+              <span className="font-semibold text-emerald-700">PM Surya Ghar (Included)</span>
             </div>
           </div>
 
-          <div className="max-w-md mx-auto p-4 rounded-lg bg-solar-950/40 border border-solar-500/20 text-xs text-slate-300 text-left space-y-2">
-            <p className="font-semibold text-solar-300 flex items-center gap-1.5">
-              <PhoneCall className="w-4 h-4 text-solar-400" />
+          <div className="max-w-md mx-auto p-4 rounded-xl bg-amber-50/70 border border-amber-200 text-xs text-slate-700 text-left space-y-2">
+            <p className="font-bold text-amber-900 flex items-center gap-1.5">
+              <PhoneCall className="w-4 h-4 text-amber-700" />
               What Happens Next:
             </p>
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              1. Our rooftop design engineer will contact you at <strong className="text-slate-200">{submittedLead.phone}</strong> to confirm your address and schedule the 3D shadow analysis.
+            <p className="text-[11px] text-slate-600 leading-relaxed">
+              1. Our rooftop design engineer will contact you at <strong className="text-slate-800">{submittedLead.phone}</strong> to confirm your address and schedule the 3D shadow analysis.
             </p>
-            <p className="text-[11px] text-slate-400 leading-relaxed">
+            <p className="text-[11px] text-slate-600 leading-relaxed">
               2. We will generate your customized Bill of Materials (BOM) and file your pre-registration on the National Portal for the PM Surya Ghar subsidy.
             </p>
           </div>
@@ -136,24 +136,26 @@ export const LeadCaptureForm: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
             <a
               href={`/portal?phone=${encodeURIComponent(submittedLead.phone)}`}
-              className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg bg-solar-600 hover:bg-solar-500 text-white text-xs font-bold transition-colors"
+              className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold shadow-md transition-colors"
             >
               <span>Track Application on Customer Portal</span>
               <ArrowRight className="w-4 h-4" />
             </a>
 
-            <Button variant="outline" size="sm" onClick={resetForm} className="border-slate-700 text-slate-300">
+            <Button variant="outline" size="sm" onClick={resetForm} className="border-slate-300 text-slate-700">
               Submit Another Inquiry
             </Button>
           </div>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="flex items-center gap-2 mb-2 pb-3 border-b border-slate-800">
-            <Building2 className="w-5 h-5 text-solar-400" />
+          <div className="flex items-center gap-2 mb-2 pb-3 border-b border-slate-200">
+            <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+              <Building2 className="w-5 h-5" />
+            </div>
             <div>
-              <h3 className="text-base font-bold text-white">Book Free Rooftop Site Survey</h3>
-              <p className="text-[11px] text-slate-400">
+              <h3 className="text-base font-bold text-slate-900">Book Free Rooftop Site Survey</h3>
+              <p className="text-[11px] text-slate-500">
                 Get an engineer site visit, 3D shadow analysis, and official PM Surya Ghar subsidy paperwork.
               </p>
             </div>
@@ -252,9 +254,9 @@ export const LeadCaptureForm: React.FC = () => {
               id="subsidy-check"
               checked={subsidyRequired}
               onChange={(e) => setSubsidyRequired(e.target.checked)}
-              className="rounded border-slate-700 bg-slate-800 text-solar-500 focus:ring-solar-500"
+              className="rounded border-slate-300 text-amber-500 focus:ring-amber-500"
             />
-            <label htmlFor="subsidy-check" className="text-xs text-slate-300 cursor-pointer">
+            <label htmlFor="subsidy-check" className="text-xs text-slate-700 cursor-pointer">
               Apply for <strong>PM Surya Ghar Central Govt. Subsidy</strong> (Up to ₹78,000 direct bank transfer assistance).
             </label>
           </div>
@@ -264,7 +266,7 @@ export const LeadCaptureForm: React.FC = () => {
               type="submit"
               variant="primary"
               size="lg"
-              className="w-full bg-solar-600 hover:bg-solar-500 font-bold text-sm shadow-lg hover:shadow-solar-500/25"
+              className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-sm shadow-md"
               isLoading={isSubmitting}
               leftIcon={<Send className="w-4 h-4" />}
             >
@@ -272,17 +274,17 @@ export const LeadCaptureForm: React.FC = () => {
             </Button>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-4 text-[11px] text-slate-400 pt-2 border-t border-slate-800/60">
-            <span className="flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+          <div className="flex flex-wrap items-center justify-center gap-4 text-[11px] text-slate-500 pt-3 border-t border-slate-100">
+            <span className="flex items-center gap-1 font-medium">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
               100% Free Site Inspection
             </span>
-            <span className="flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-solar-400" />
+            <span className="flex items-center gap-1 font-medium">
+              <Calendar className="w-3.5 h-3.5 text-amber-600" />
               Visit within 24-48 Hours
             </span>
-            <span className="flex items-center gap-1">
-              <FileCheck2 className="w-3.5 h-3.5 text-amber-400" />
+            <span className="flex items-center gap-1 font-medium">
+              <FileCheck2 className="w-3.5 h-3.5 text-sky-600" />
               Zero-Paperwork Subsidy Handling
             </span>
           </div>

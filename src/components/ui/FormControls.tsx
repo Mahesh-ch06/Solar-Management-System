@@ -22,7 +22,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full bg-white text-sm text-slate-900 placeholder:text-slate-400 rounded-lg border border-slate-300 pl-9 pr-9 py-2 focus:outline-none focus:ring-2 focus:ring-solar-500/20 focus:border-solar-600 transition-all"
+      className="w-full bg-white text-sm text-slate-900 placeholder:text-slate-400 rounded-lg border border-slate-300 pl-9 pr-9 py-2 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all shadow-xs"
     />
     {value && (
       <button
@@ -61,7 +61,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs" onClick={onCancel} />
-      <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-sm w-full p-6 animate-fade-in">
+      <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-sm w-full p-6 animate-fade-in text-slate-900">
         <h3 className="text-sm font-bold text-slate-900">{title}</h3>
         <p className="text-xs text-slate-600 mt-2 leading-relaxed">{message}</p>
         <div className="flex items-center justify-end gap-2.5 mt-5">
@@ -74,8 +74,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           <button
             onClick={onConfirm}
             className={cn(
-              'px-4 py-2 text-xs font-medium rounded-lg text-white transition-colors',
-              variant === 'danger' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-solar-800 hover:bg-solar-900'
+              'px-4 py-2 text-xs font-semibold rounded-lg text-white transition-colors',
+              variant === 'danger' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-amber-500 hover:bg-amber-600 text-slate-950'
             )}
           >
             {confirmLabel}
@@ -105,10 +105,10 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="text-xs px-2 py-1 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center gap-1 transition-colors"
+        className="text-xs px-2.5 py-1 rounded border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 flex items-center gap-1 transition-colors shadow-xs"
       >
         {current?.label || currentStatus}
-        <svg className="w-3 h-3" viewBox="0 0 20 20" fill="currentColor">
+        <svg className="w-3 h-3 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
           <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
         </svg>
       </button>
@@ -119,8 +119,11 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
             {options.filter(o => o.value !== currentStatus).map(option => (
               <button
                 key={option.value}
-                onClick={() => { onChange(option.value); setOpen(false); }}
-                className="w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors"
+                onClick={() => {
+                  onChange(option.value);
+                  setOpen(false);
+                }}
+                className="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors"
               >
                 {option.label}
               </button>

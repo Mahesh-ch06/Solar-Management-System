@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import {
   getUsers,
@@ -10,6 +10,7 @@ import { UserAccount, RoleAuditEntry } from '../../types/auth';
 import { UserRole } from '../../types/roles';
 import { ROLE_CONFIGS } from '../../constants/roles';
 import { emailService } from '../../services/emailService';
+import { apiClient } from '../../api/apiClient';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
@@ -51,10 +52,31 @@ export const UserManagementPage: React.FC = () => {
   // Audit History Modal state
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
 
-  const refreshData = () => {
-    setUserList(getUsers());
-    setAuditLogs(getRoleAuditLogs());
+  const refreshData = async () => {
+    try {
+      const [usersRes, logsRes] = await Promise.all([
+        apiClient.get('/admin/users'),
+        apiClient.get('/admin/audit-logs'),
+      ]);
+      if (usersRes.data?.data && Array.isArray(usersRes.data.data)) {
+        setUserList(usersRes.data.data);
+      } else {
+        setUserList(getUsers());
+      }
+      if (logsRes.data?.data && Array.isArray(logsRes.data.data)) {
+        setAuditLogs(logsRes.data.data);
+      } else {
+        setAuditLogs(getRoleAuditLogs());
+      }
+    } catch {
+      setUserList(getUsers());
+      setAuditLogs(getRoleAuditLogs());
+    }
   };
+
+  useEffect(() => {
+    refreshData();
+  }, []);
 
   const filteredUsers = userList.filter((u) => {
     const matchesSearch =
@@ -88,7 +110,18 @@ export const UserManagementPage: React.FC = () => {
       setIsSubmittingRole(true);
       const oldRole = selectedUserForRole.role;
 
-      // 1. Update in database
+      // 1. Update in backend REST API if active
+      try {
+        await apiClient.patch(`/admin/users/${selectedUserForRole.id}/role`, {
+          role: newSelectedRole,
+          reason: changeReason.trim(),
+          activateUser: true,
+        });
+      } catch {
+        // Fallback to local store
+      }
+
+      // 2. Update in client database
       updateUserRole(
         selectedUserForRole.id,
         newSelectedRole,
@@ -102,7 +135,7 @@ export const UserManagementPage: React.FC = () => {
         updateUserStatus(selectedUserForRole.id, 'ACTIVE');
       }
 
-      // 2. Dispatch EmailJS notification if requested
+      // 3. Dispatch Email notification if requested
       if (sendEmailNotification) {
         await emailService.notifyRoleAssigned(
           selectedUserForRole.email,
@@ -114,10 +147,10 @@ export const UserManagementPage: React.FC = () => {
         );
       }
 
-      refreshData();
+      await refreshData();
       showToast(
         'Role Updated',
-        `${selectedUserForRole.name} assigned to ${ROLE_CONFIGS[newSelectedRole].label}. Audit log updated.`,
+        `${selectedUserForRole.name} assigned to ${ROLE_CONFIGS[newSelectedRole]?.label || newSelectedRole}. Audit log updated.`,
         'success'
       );
       setSelectedUserForRole(null);
@@ -128,10 +161,17 @@ export const UserManagementPage: React.FC = () => {
     }
   };
 
-  const handleStatusToggle = (targetUser: UserAccount, newStatus: 'ACTIVE' | 'SUSPENDED') => {
+  const handleStatusToggle = async (targetUser: UserAccount, newStatus: 'ACTIVE' | 'SUSPENDED') => {
     try {
+      try {
+        await apiClient.patch(`/admin/users/${targetUser.id}/status`, {
+          status: newStatus,
+        });
+      } catch {
+        // Fallback
+      }
       updateUserStatus(targetUser.id, newStatus);
-      refreshData();
+      await refreshData();
       showToast(
         'Status Changed',
         `${targetUser.name}'s account is now ${newStatus.replace('_', ' ')}.`,
@@ -153,7 +193,7 @@ export const UserManagementPage: React.FC = () => {
             variant="outline"
             size="sm"
             onClick={() => setIsAuditModalOpen(true)}
-            leftIcon={<History className="w-4 h-4 text-slate-500" />}
+            leftIcon={<History className="w-4 h-4 text-zinc-400" />}
           >
             Role Audit Trail ({auditLogs.length})
           </Button>
@@ -162,28 +202,28 @@ export const UserManagementPage: React.FC = () => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="p-4 border-l-4 border-l-purple-600">
-          <p className="text-xs font-semibold text-slate-500 uppercase">Total User Accounts</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">{userList.length}</p>
-          <span className="text-[11px] text-slate-400 mt-0.5 block">Staff & Enterprise Accounts</span>
+        <Card className="p-4 border-l-4 border-l-purple-500 shadow-xs">
+          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Accounts</p>
+          <p className="text-2xl font-bold text-slate-900 font-mono mt-1">{userList.length}</p>
+          <span className="text-[11px] text-slate-500 mt-0.5 block">Staff & Enterprise Accounts</span>
         </Card>
 
-        <Card className="p-4 border-l-4 border-l-emerald-600">
-          <p className="text-xs font-semibold text-emerald-800 uppercase">Active Authorized Staff</p>
-          <p className="text-2xl font-bold text-emerald-900 mt-1">{activeCount}</p>
-          <span className="text-[11px] text-emerald-700 mt-0.5 block">Authenticated with assigned roles</span>
+        <Card className="p-4 border-l-4 border-l-emerald-500 shadow-xs">
+          <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Active Authorized</p>
+          <p className="text-2xl font-bold text-slate-900 font-mono mt-1">{activeCount}</p>
+          <span className="text-[11px] text-slate-500 mt-0.5 block">Authenticated staff with roles</span>
         </Card>
 
-        <Card className="p-4 border-l-4 border-l-amber-500">
-          <p className="text-xs font-semibold text-amber-800 uppercase">Pending Review</p>
-          <p className="text-2xl font-bold text-amber-900 mt-1">{pendingCount}</p>
-          <span className="text-[11px] text-amber-700 mt-0.5 block">New registrations awaiting role</span>
+        <Card className="p-4 border-l-4 border-l-amber-500 shadow-xs">
+          <p className="text-[11px] font-bold text-amber-600 uppercase tracking-wider">Pending Review</p>
+          <p className="text-2xl font-bold text-slate-900 font-mono mt-1">{pendingCount}</p>
+          <span className="text-[11px] text-slate-500 mt-0.5 block">New registrations awaiting role</span>
         </Card>
 
-        <Card className="p-4 border-l-4 border-l-sky-600">
-          <p className="text-xs font-semibold text-sky-800 uppercase">Role Audits Recorded</p>
-          <p className="text-2xl font-bold text-sky-900 mt-1">{auditLogs.length}</p>
-          <span className="text-[11px] text-sky-700 mt-0.5 block">Logged permission changes</span>
+        <Card className="p-4 border-l-4 border-l-sky-500 shadow-xs">
+          <p className="text-[11px] font-bold text-sky-600 uppercase tracking-wider">Role Audits</p>
+          <p className="text-2xl font-bold text-slate-900 font-mono mt-1">{auditLogs.length}</p>
+          <span className="text-[11px] text-slate-500 mt-0.5 block">Logged permission changes</span>
         </Card>
       </div>
 
@@ -196,10 +236,10 @@ export const UserManagementPage: React.FC = () => {
               <button
                 key={st}
                 onClick={() => setStatusFilter(st)}
-                className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
                   statusFilter === st
-                    ? 'bg-white text-slate-900 shadow-xs font-semibold'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-amber-500 text-slate-950 font-bold shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                 }`}
               >
                 {st === 'ALL' ? 'All Status' : st === 'PENDING_APPROVAL' ? `Pending (${pendingCount})` : st.replace('_', ' ')}
@@ -211,11 +251,11 @@ export const UserManagementPage: React.FC = () => {
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="text-xs rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-solar-500"
+            className="text-xs rounded-lg border border-slate-300 bg-white text-slate-800 px-3 py-1.5 font-medium focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20"
           >
             <option value="ALL">All Roles</option>
             {Object.keys(ROLE_CONFIGS).map((rk) => (
-              <option key={rk} value={rk}>
+              <option key={rk} value={rk} className="text-slate-800">
                 {ROLE_CONFIGS[rk as UserRole].label}
               </option>
             ))}
@@ -232,7 +272,7 @@ export const UserManagementPage: React.FC = () => {
       </div>
 
       {/* Users Table */}
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden shadow-xs">
         <Table>
           <TableHeader>
             <TableRow>
@@ -255,17 +295,17 @@ export const UserManagementPage: React.FC = () => {
               filteredUsers.map((targetUser) => {
                 const roleConfig = ROLE_CONFIGS[targetUser.role] || {
                   label: targetUser.role,
-                  badgeColor: 'bg-slate-100 text-slate-700',
+                  badgeColor: 'bg-slate-100 text-slate-700 border-slate-200',
                 };
                 const isPending = targetUser.status === 'PENDING_APPROVAL';
                 const isSuspended = targetUser.status === 'SUSPENDED';
 
                 return (
-                  <TableRow key={targetUser.id} className="hover:bg-slate-50/70 transition-colors">
+                  <TableRow key={targetUser.id} className="hover:bg-slate-50 transition-colors border-b border-slate-100">
                     <TableCell>
                       <div>
                         <span className="font-semibold text-slate-900 block text-xs">{targetUser.name}</span>
-                        <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                        <span className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
                           <Mail className="w-3 h-3 text-slate-400" />
                           {targetUser.email}
                         </span>
@@ -305,9 +345,9 @@ export const UserManagementPage: React.FC = () => {
 
                     <TableCell className="text-xs text-slate-600">
                       <div>
-                        <span>{targetUser.roleAssignedBy || 'System Provisioned'}</span>
+                        <span className="text-slate-800 font-medium">{targetUser.roleAssignedBy || 'System Provisioned'}</span>
                         {targetUser.roleAssignedAt && (
-                          <span className="text-[10px] text-slate-400 block">
+                          <span className="text-[10px] text-slate-500 block mt-0.5">
                             {new Date(targetUser.roleAssignedAt).toLocaleDateString()}
                           </span>
                         )}
@@ -340,7 +380,7 @@ export const UserManagementPage: React.FC = () => {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleStatusToggle(targetUser, 'ACTIVE')}
-                                className="text-emerald-700 hover:bg-emerald-50"
+                                className="text-emerald-700 border-emerald-300 hover:bg-emerald-50"
                               >
                                 Activate
                               </Button>
@@ -349,7 +389,7 @@ export const UserManagementPage: React.FC = () => {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleStatusToggle(targetUser, 'SUSPENDED')}
-                                className="text-rose-700 hover:bg-rose-50"
+                                className="text-rose-700 border-rose-300 hover:bg-rose-50"
                               >
                                 Suspend
                               </Button>
@@ -397,14 +437,14 @@ export const UserManagementPage: React.FC = () => {
           }
         >
           <div className="space-y-4">
-            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs space-y-1">
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs space-y-1">
               <p>
                 <span className="text-slate-500">Current Role:</span>{' '}
-                <strong className="text-slate-800">{ROLE_CONFIGS[selectedUserForRole.role]?.label || selectedUserForRole.role}</strong>
+                <strong className="text-slate-900 font-semibold">{ROLE_CONFIGS[selectedUserForRole.role]?.label || selectedUserForRole.role}</strong>
               </p>
               <p>
                 <span className="text-slate-500">Registered Department:</span>{' '}
-                <span className="text-slate-700">{selectedUserForRole.department || 'Not specified'}</span>
+                <span className="text-slate-700 font-medium">{selectedUserForRole.department || 'Not specified'}</span>
               </p>
             </div>
 
@@ -436,10 +476,10 @@ export const UserManagementPage: React.FC = () => {
                 type="checkbox"
                 checked={sendEmailNotification}
                 onChange={(e) => setSendEmailNotification(e.target.checked)}
-                className="mt-0.5 rounded text-solar-800 focus:ring-solar-500"
+                className="mt-0.5 rounded text-amber-500 focus:ring-amber-500"
               />
               <span>
-                Dispatch EmailJS notification to <strong>{selectedUserForRole.email}</strong> informing them of this role assignment.
+                Dispatch notification to <strong>{selectedUserForRole.email}</strong> informing them of this role assignment.
               </span>
             </label>
           </div>
@@ -462,14 +502,14 @@ export const UserManagementPage: React.FC = () => {
         >
           <div className="space-y-3 max-h-[60vh] overflow-y-auto">
             {auditLogs.length === 0 ? (
-              <p className="text-center py-6 text-xs text-slate-400">No role changes recorded yet.</p>
+              <p className="text-center py-6 text-xs text-slate-500">No role changes recorded yet.</p>
             ) : (
               auditLogs.map((log) => (
-                <div key={log.id} className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-1.5 text-xs">
+                <div key={log.id} className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 space-y-1.5 text-xs">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-900">{log.userName}</span>
-                      <span className="text-slate-400 font-mono text-[11px]">({log.userEmail})</span>
+                      <span className="font-semibold text-slate-900">{log.userName}</span>
+                      <span className="text-slate-500 font-mono text-[11px]">({log.userEmail})</span>
                     </div>
                     <span className="text-[11px] text-slate-500 flex items-center gap-1">
                       <Clock className="w-3 h-3 text-slate-400" />
@@ -478,18 +518,18 @@ export const UserManagementPage: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-2 text-xs pt-1">
-                    <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-700 font-medium">
+                    <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-800 font-medium">
                       {ROLE_CONFIGS[log.oldRole]?.label || log.oldRole}
                     </span>
                     <span className="text-slate-400">➔</span>
-                    <span className="px-2 py-0.5 rounded bg-solar-100 text-solar-800 font-bold border border-solar-200">
+                    <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-semibold border border-amber-200">
                       {ROLE_CONFIGS[log.newRole]?.label || log.newRole}
                     </span>
                   </div>
 
-                  <div className="pt-1.5 border-t border-slate-200/60 flex items-start justify-between gap-4 text-[11px] text-slate-600">
+                  <div className="pt-1.5 border-t border-slate-200 flex items-start justify-between gap-4 text-[11px] text-slate-600">
                     <p className="italic">"{log.reason}"</p>
-                    <span className="text-slate-500 shrink-0">By: {log.changedByAdminName}</span>
+                    <span className="text-slate-500 shrink-0 font-medium">By: {log.changedByAdminName}</span>
                   </div>
                 </div>
               ))

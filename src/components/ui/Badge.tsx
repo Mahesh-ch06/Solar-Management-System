@@ -8,13 +8,13 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
 }
 
 const variantStyles: Record<string, string> = {
-  emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
-  amber: 'bg-amber-50 text-amber-800 border-amber-200/80',
-  rose: 'bg-rose-50 text-rose-700 border-rose-200/80',
-  sky: 'bg-sky-50 text-sky-700 border-sky-200/80',
-  slate: 'bg-slate-100 text-slate-700 border-slate-200',
-  purple: 'bg-purple-50 text-purple-700 border-purple-200/80',
-  solar: 'bg-solar-50 text-solar-900 border-solar-200',
+  emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200/80 font-medium',
+  amber: 'bg-amber-50 text-amber-800 border-amber-200/80 font-medium',
+  rose: 'bg-rose-50 text-rose-700 border-rose-200/80 font-medium',
+  sky: 'bg-sky-50 text-sky-700 border-sky-200/80 font-medium',
+  slate: 'bg-slate-100 text-slate-700 border-slate-200 font-medium',
+  purple: 'bg-purple-50 text-purple-700 border-purple-200/80 font-medium',
+  solar: 'bg-amber-50 text-amber-900 border-amber-300 font-semibold',
 };
 
 const dotColors: Record<string, string> = {
@@ -24,7 +24,7 @@ const dotColors: Record<string, string> = {
   sky: 'bg-sky-500',
   slate: 'bg-slate-400',
   purple: 'bg-purple-500',
-  solar: 'bg-solar-600',
+  solar: 'bg-amber-500',
 };
 
 export const Badge: React.FC<BadgeProps> = ({

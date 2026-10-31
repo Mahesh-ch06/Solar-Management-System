@@ -61,19 +61,19 @@ export const RevenueExpenseChart: React.FC<RevenueExpenseChartProps> = ({ data }
                   const margin = rev > 0 ? (((rev - exp) / rev) * 100).toFixed(1) : '0';
 
                   return (
-                    <div className="bg-navy-950 text-white p-3 rounded-xl shadow-xl text-xs space-y-1.5 border border-navy-800">
-                      <p className="font-bold text-amber-400">{label} Financials</p>
+                    <div className="bg-white text-slate-900 p-3 rounded-xl shadow-xl text-xs space-y-1.5 border border-slate-200 ring-1 ring-slate-900/5">
+                      <p className="font-bold text-amber-600">{label} Financials</p>
                       <div className="flex items-center justify-between gap-4">
-                        <span className="text-slate-300">Revenue:</span>
-                        <span className="font-semibold text-emerald-400">₹{rev.toFixed(1)} Lakhs</span>
+                        <span className="text-slate-500">Revenue:</span>
+                        <span className="font-semibold text-emerald-600">₹{rev.toFixed(1)} Lakhs</span>
                       </div>
                       <div className="flex items-center justify-between gap-4">
-                        <span className="text-slate-300">Expenses:</span>
-                        <span className="font-semibold text-amber-400">₹{exp.toFixed(1)} Lakhs</span>
+                        <span className="text-slate-500">Expenses:</span>
+                        <span className="font-semibold text-amber-600">₹{exp.toFixed(1)} Lakhs</span>
                       </div>
-                      <div className="pt-1 border-t border-navy-800 flex items-center justify-between gap-4 text-solar-300 font-bold">
-                        <span>Est. Margin:</span>
-                        <span>{margin}%</span>
+                      <div className="pt-1 border-t border-slate-100 flex items-center justify-between gap-4 text-slate-900 font-bold">
+                        <span className="text-slate-600">Est. Margin:</span>
+                        <span className="text-emerald-600">{margin}%</span>
                       </div>
                     </div>
                   );

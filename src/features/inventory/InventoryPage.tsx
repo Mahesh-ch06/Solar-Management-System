@@ -275,7 +275,7 @@ export const InventoryPage: React.FC = () => {
                   onClick={() => setViewMode('GRID')}
                   className={`p-1.5 rounded-md transition-all ${
                     viewMode === 'GRID'
-                      ? 'bg-solar-800 text-white shadow-xs'
+                      ? 'bg-amber-500 text-slate-950 shadow-xs'
                       : 'text-slate-500 hover:text-slate-800'
                   }`}
                   title="Grid View"
@@ -286,7 +286,7 @@ export const InventoryPage: React.FC = () => {
                   onClick={() => setViewMode('TABLE')}
                   className={`p-1.5 rounded-md transition-all ${
                     viewMode === 'TABLE'
-                      ? 'bg-solar-800 text-white shadow-xs'
+                      ? 'bg-amber-500 text-slate-950 shadow-xs'
                       : 'text-slate-500 hover:text-slate-800'
                   }`}
                   title="Table View"
@@ -308,7 +308,7 @@ export const InventoryPage: React.FC = () => {
                   onClick={() => setSelectedCategory(cat.id)}
                   className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                     isSelected
-                      ? 'bg-solar-800 text-white shadow-xs'
+                      ? 'bg-amber-500 text-slate-950 shadow-xs'
                       : 'bg-white border border-slate-200/80 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
                 >
@@ -316,7 +316,7 @@ export const InventoryPage: React.FC = () => {
                   <span
                     className={`px-1.5 py-0.2 rounded-full text-[10px] ${
                       isSelected
-                        ? 'bg-solar-900/80 text-amber-300'
+                        ? 'bg-amber-600/80 text-slate-950 font-extrabold'
                         : 'bg-slate-100 text-slate-500'
                     }`}
                   >
