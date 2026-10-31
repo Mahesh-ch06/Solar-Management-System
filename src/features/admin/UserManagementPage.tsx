@@ -95,27 +95,32 @@ export const UserManagementPage: React.FC = () => {
   const handleOpenRoleModal = (targetUser: UserAccount) => {
     setSelectedUserForRole(targetUser);
     setNewSelectedRole(targetUser.role);
-    setChangeReason('');
+    const defaultReason =
+      targetUser.status === 'PENDING_APPROVAL'
+        ? `Account onboarding approved & role assigned by ${currentAdmin?.name || 'Administrator'}`
+        : `Role adjustment approved by ${currentAdmin?.name || 'Administrator'}`;
+    setChangeReason(defaultReason);
     setSendEmailNotification(true);
   };
 
   const handleSaveRoleChange = async () => {
     if (!selectedUserForRole || !currentAdmin) return;
 
-    if (!changeReason.trim()) {
-      showToast('Validation Error', 'Please specify a reason for this role assignment for the audit log.', 'error');
-      return;
-    }
-
     try {
       setIsSubmittingRole(true);
       const oldRole = selectedUserForRole.role;
+      const fallbackReason =
+        selectedUserForRole.status === 'PENDING_APPROVAL'
+          ? `Account onboarding approved & role assigned by ${currentAdmin.name}`
+          : `Role changed from ${ROLE_CONFIGS[oldRole]?.label || oldRole} to ${ROLE_CONFIGS[newSelectedRole]?.label || newSelectedRole} by ${currentAdmin.name}`;
+
+      const effectiveReason = changeReason.trim() || fallbackReason;
 
       // 1. Update in backend REST API if active
       try {
         await apiClient.patch(`/admin/users/${selectedUserForRole.id}/role`, {
           role: newSelectedRole,
-          reason: changeReason.trim(),
+          reason: effectiveReason,
           activateUser: true,
         });
         if (selectedUserForRole.status === 'PENDING_APPROVAL') {
@@ -131,7 +136,7 @@ export const UserManagementPage: React.FC = () => {
         newSelectedRole,
         currentAdmin.id,
         currentAdmin.name,
-        changeReason.trim()
+        effectiveReason
       );
 
       // If user was pending approval, also activate them
@@ -147,7 +152,7 @@ export const UserManagementPage: React.FC = () => {
           ROLE_CONFIGS[oldRole]?.label || oldRole,
           ROLE_CONFIGS[newSelectedRole]?.label || newSelectedRole,
           currentAdmin.name,
-          changeReason.trim()
+          effectiveReason
         );
       }
 
@@ -467,12 +472,11 @@ export const UserManagementPage: React.FC = () => {
             />
 
             <Textarea
-              label="Reason for Role Assignment (Required for Audit Trail)"
+              label="Reason for Role Assignment (Audit Trail)"
               value={changeReason}
               onChange={(e) => setChangeReason(e.target.value)}
-              placeholder="e.g. Employee completed certification and transferred to Lead Field Engineer..."
+              placeholder="e.g. Account onboarding approved / Role updated (or enter custom reason)"
               rows={3}
-              required
             />
 
             <label className="flex items-start gap-2 text-xs text-slate-700 cursor-pointer pt-1 select-none">
