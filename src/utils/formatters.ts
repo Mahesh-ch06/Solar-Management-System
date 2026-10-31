@@ -23,8 +23,12 @@ export function formatCapacity(kw: number): string {
   return `${kw} kW`;
 }
 
-export function formatDate(dateString: string | Date): string {
+export function formatDate(dateString: string | Date | undefined | null): string {
+  if (!dateString) return '—';
   const d = typeof dateString === 'string' ? new Date(dateString) : dateString;
+  if (isNaN(d.getTime())) {
+    return String(dateString);
+  }
   return new Intl.DateTimeFormat('en-IN', {
     day: 'numeric',
     month: 'short',
@@ -32,8 +36,12 @@ export function formatDate(dateString: string | Date): string {
   }).format(d);
 }
 
-export function formatDateTime(dateString: string | Date): string {
+export function formatDateTime(dateString: string | Date | undefined | null): string {
+  if (!dateString) return '—';
   const d = typeof dateString === 'string' ? new Date(dateString) : dateString;
+  if (isNaN(d.getTime())) {
+    return String(dateString);
+  }
   return new Intl.DateTimeFormat('en-IN', {
     day: 'numeric',
     month: 'short',
