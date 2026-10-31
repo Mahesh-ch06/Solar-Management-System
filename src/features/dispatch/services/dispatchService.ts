@@ -219,4 +219,63 @@ export const dispatchService = {
 
     return wrapResponse<DispatchOrder>(updated, `Status updated to ${status}`);
   },
+
+  /**
+   * Marks a dispatch order as dispatched with vehicle and driver details
+   */
+  async markDispatched(
+    id: string,
+    vehicleNumber?: string,
+    driverName?: string
+  ): Promise<ApiResponse<DispatchOrder>> {
+    return this.updateStatus(id, 'DISPATCHED', { vehicleNumber, driverName });
+  },
+
+  /**
+   * Marks a dispatch order as delivered
+   */
+  async markDelivered(id: string): Promise<ApiResponse<DispatchOrder>> {
+    return this.updateStatus(id, 'DELIVERED');
+  },
+
+  /**
+   * Updates serial numbers for items in a dispatch order
+   */
+  async updateDispatchSerials(
+    dispatchOrderId: string,
+    itemsWithSerials: { inventoryItemId: string; serialNumbers: string[] }[]
+  ): Promise<ApiResponse<DispatchOrder>> {
+    const order = dispatchOrders.find((d) => d.id === dispatchOrderId);
+    if (!order) {
+      throw new Error(`Dispatch order "${dispatchOrderId}" not found`);
+    }
+
+    const updatedItems = order.items.map((item) => {
+      const match = itemsWithSerials.find((m) => m.inventoryItemId === item.inventoryItemId);
+      if (match) {
+        return { ...item, serialNumbers: match.serialNumbers };
+      }
+      return item;
+    });
+
+    const allComplete = updatedItems.every((i) => i.serialNumbers.length >= i.quantity);
+    const newStatus = allComplete ? 'READY' : order.status;
+
+    if (!USE_MOCK_DATA) {
+      try {
+        await apiClient.put(`/dispatch/${dispatchOrderId}/serials`, { items: itemsWithSerials });
+      } catch (err) {
+        console.warn('[dispatchService] API updateDispatchSerials failed, updating local store:', err);
+      }
+    }
+
+    const updated = updateDispatchOrder(dispatchOrderId, {
+      items: updatedItems,
+      status: newStatus,
+      updatedAt: new Date().toISOString(),
+    });
+
+    return wrapResponse<DispatchOrder>(updated, 'Serial numbers updated');
+  },
 };
+

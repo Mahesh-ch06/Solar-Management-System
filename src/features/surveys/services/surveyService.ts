@@ -119,7 +119,6 @@ export const surveyService = {
       structureFeasible: Boolean(data.structureFeasible),
       recommendedCapacityKW: Number(data.recommendedCapacityKW),
       surveyNotes: data.surveyNotes || '',
-      obstaclesIdentified: data.obstaclesIdentified || '',
       createdAt: now,
       updatedAt: now,
     };

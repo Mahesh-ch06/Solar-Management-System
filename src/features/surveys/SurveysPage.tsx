@@ -104,7 +104,9 @@ export const SurveysPage: React.FC = () => {
     onSuccess: (updated) => {
       showToast(
         'Survey Approved',
-        `Site survey for ${updated.customerName} has been approved. Status transitioned to SURVEY_DONE.`,
+        updated
+          ? `Site survey for ${updated.customerName} has been approved. Status transitioned to SURVEY_DONE.`
+          : 'Site survey has been approved. Status transitioned to SURVEY_DONE.',
         'success'
       );
       setActiveApprovalId(null);
@@ -125,7 +127,9 @@ export const SurveysPage: React.FC = () => {
     onSuccess: (updated) => {
       showToast(
         'Survey Rejected',
-        `Survey for ${updated.customerName} was marked as rejected.`,
+        updated
+          ? `Survey for ${updated.customerName} was marked as rejected.`
+          : 'Survey was marked as rejected.',
         'warning'
       );
       setActiveRejectionId(null);

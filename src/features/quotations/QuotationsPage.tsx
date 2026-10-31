@@ -15,7 +15,7 @@ import {
   TableHead,
   TableCell,
 } from '../../components/ui/Table';
-import { Quotation, QuotationStatus } from '../../types/quotation';
+import { Quotation, QuotationStatus, Order } from '../../types/quotation';
 import { quotationService } from './services/quotationService';
 import { QuotationBuilderDrawer } from './components/QuotationBuilderDrawer';
 import { QuotationDetailModal } from './components/QuotationDetailModal';
@@ -68,7 +68,7 @@ export const QuotationsPage: React.FC = () => {
   // Convert to Order Mutation
   const convertMutation = useMutation({
     mutationFn: (quotationId: string) => quotationService.convertToOrder(quotationId),
-    onSuccess: (result) => {
+    onSuccess: (result: { quotation: Quotation; order: Order }) => {
       queryClient.invalidateQueries({ queryKey: ['quotations'] });
       showToast(
         'Order Created Successfully',
@@ -91,7 +91,11 @@ export const QuotationsPage: React.FC = () => {
       quotationService.updateQuotationStatus(id, status),
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ['quotations'] });
-      showToast('Status Updated', `Quotation ${updated.quotationNumber} marked as ${updated.status}.`, 'info');
+      if (updated) {
+        showToast('Status Updated', `Quotation ${updated.quotationNumber} marked as ${updated.status}.`, 'info');
+      } else {
+        showToast('Status Updated', 'Quotation status updated.', 'info');
+      }
     },
   });
 

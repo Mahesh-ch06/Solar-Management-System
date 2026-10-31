@@ -91,11 +91,15 @@ export const CustomersPage: React.FC = () => {
     mutationFn: ({ id, status }: { id: string; status: EnquiryStatus }) =>
       customerService.updateCustomerStatus(id, status),
     onSuccess: (updated) => {
-      showToast(
-        'Status Updated',
-        `${updated.name}'s status changed to ${STATUS_DISPLAY_LABELS[updated.status]}`,
-        'success'
-      );
+      if (updated) {
+        showToast(
+          'Status Updated',
+          `${updated.name}'s status changed to ${STATUS_DISPLAY_LABELS[updated.status]}`,
+          'success'
+        );
+      } else {
+        showToast('Status Updated', 'Customer status updated successfully', 'success');
+      }
       queryClient.invalidateQueries({ queryKey: ['customers'] });
     },
     onError: (err: unknown) => {

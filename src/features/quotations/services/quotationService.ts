@@ -94,8 +94,9 @@ export async function addQuotation(data: QuotationFormData): Promise<Quotation> 
     balanceAmount,
     status: 'DRAFT',
     validUntil: data.validUntil || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    termsAndConditions: data.termsAndConditions || 'Standard 5-year solar warranty on workmanship and 25-year panel performance guarantee.',
+    termsConditions: 'Standard 5-year solar warranty on workmanship and 25-year panel performance guarantee.',
     notes: data.notes || '',
+    createdBy: 'EMP-ADMIN-01',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -105,7 +106,7 @@ export async function addQuotation(data: QuotationFormData): Promise<Quotation> 
 }
 
 export async function updateQuotationStatus(id: string, status: QuotationStatus): Promise<Quotation | null> {
-  if (!USE_MOCK_DATA && status === 'ACCEPTED') {
+  if (!USE_MOCK_DATA && (status === 'APPROVED' || status === 'CONVERTED_TO_ORDER')) {
     try {
       await apiClient.post(`/quotations/${id}/confirm-order`, {});
     } catch (err) {
@@ -144,20 +145,33 @@ export async function createOrderFromQuotation(quotationId: string, advancePaid:
     customerId: quote.customerId,
     customerName: quote.customerName,
     capacityKW: quote.capacityKW,
+    systemType: quote.systemType,
     totalAmount: quote.totalAmount,
-    advanceReceived: advancePaid,
-    balanceDue: quote.totalAmount - advancePaid,
-    paymentStatus: advancePaid >= quote.totalAmount ? 'PAID' : advancePaid > 0 ? 'PARTIALLY_PAID' : 'UNPAID',
-    stage: 'ORDER_CONFIRMED',
+    advancePaid: advancePaid,
+    balanceAmount: quote.totalAmount - advancePaid,
+    status: advancePaid >= quote.totalAmount ? 'ADVANCE_RECEIVED' : 'CONFIRMED',
+    assignedTechnicianIds: [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
 
   dbAddOrder(newOrder);
-  dbUpdateQuotation(quotationId, { status: 'ACCEPTED' });
+  dbUpdateQuotation(quotationId, { status: 'CONVERTED_TO_ORDER' });
   dbUpdateCustomer(quote.customerId, { status: 'CONVERTED' });
 
   return newOrder;
+}
+
+export async function convertToOrder(
+  quotationId: string,
+  advancePaid: number = 0
+): Promise<{ quotation: Quotation; order: Order }> {
+  const order = await createOrderFromQuotation(quotationId, advancePaid);
+  const quotation = quotations.find((q) => q.id === quotationId);
+  if (!order || !quotation) {
+    throw new Error('Failed to convert quotation to order');
+  }
+  return { quotation, order };
 }
 
 export async function getOrders(): Promise<Order[]> {
@@ -207,6 +221,7 @@ export const quotationService = {
   addQuotation,
   updateQuotationStatus,
   createOrderFromQuotation,
+  convertToOrder,
   getOrders,
   getOrderById,
   getCustomers,

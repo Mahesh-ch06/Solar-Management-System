@@ -126,7 +126,9 @@ export const InventoryItemFormDrawer: React.FC<InventoryItemFormDrawerProps> = (
       queryClient.invalidateQueries({ queryKey: ['inventoryItems'] });
       showToast(
         isEditing ? 'Item Updated' : 'Item Registered',
-        `Equipment ${saved.name} (${saved.sku}) saved to warehouse inventory.`,
+        saved
+          ? `Equipment ${saved.name} (${saved.sku}) saved to warehouse inventory.`
+          : 'Equipment saved to warehouse inventory.',
         'success'
       );
       reset();

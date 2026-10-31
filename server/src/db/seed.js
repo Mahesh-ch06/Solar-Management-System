@@ -41,6 +41,7 @@ const insertUser = db.prepare(`
   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
+const usersData = [
   ['usr-admin-mahesh', 'Mahesh Ch', 'maheshch1094@gmail.com', bcrypt.hashSync('Mahesh', 10), '+91 98765 43210', 'ADMIN', 'Executive Administration', 'ACTIVE', 'System Initializer', '2026-08-01T09:00:00Z', '2026-08-01T09:00:00Z'],
   ['usr-admin-nikhil', 'Nikhil', 'nikhil@gmail.com', nikhilPasswordHash, '+91 98111 99999', 'ADMIN', 'Executive Management', 'ACTIVE', 'System Initializer', '2026-08-01T09:00:00Z', '2026-08-01T09:00:00Z'],
   ['usr-admin-01', 'Rajesh Sharma', 'admin@sunpowersolutions.in', defaultPasswordHash, '+91 98111 00001', 'ADMIN', 'Executive Management', 'ACTIVE', 'System Initializer', '2026-08-01T09:00:00Z', '2026-08-01T09:00:00Z'],
