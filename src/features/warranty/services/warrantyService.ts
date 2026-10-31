@@ -1,14 +1,14 @@
 import { ApiResponse } from '../../../types/common';
 import { WarrantyRecord } from '../../../types/operations';
 import { warrantyRecords } from '../../../store/inMemoryDb';
-import { simulateMockApiCall } from '../../../mocks/mockService';
+import { wrapResponse } from '../../../services/apiResponse';
 
 export const warrantyService = {
   /**
    * Retrieves all registered warranty records
    */
   async getWarrantyRecords(): Promise<ApiResponse<WarrantyRecord[]>> {
-    return simulateMockApiCall<WarrantyRecord[]>([...warrantyRecords], 350);
+    return wrapResponse<WarrantyRecord[]>([...warrantyRecords]);
   },
 
   /**
@@ -21,7 +21,7 @@ export const warrantyService = {
       warrantyRecords.find((w) => w.serialNumber.toLowerCase().includes(clean)) ||
       null;
 
-    return simulateMockApiCall<WarrantyRecord | null>(match ? { ...match } : null, 350);
+    return wrapResponse<WarrantyRecord | null>(match ? { ...match } : null);
   },
 
   /**
@@ -40,6 +40,6 @@ export const warrantyService = {
       return diff > 0 && diff <= thresholdMs;
     });
 
-    return simulateMockApiCall<WarrantyRecord[]>([...expiring], 350);
+    return wrapResponse<WarrantyRecord[]>([...expiring]);
   },
 };

@@ -8,7 +8,7 @@ import {
   findWarrantyBySerial,
   customers,
 } from '../../../store/inMemoryDb';
-import { simulateMockApiCall } from '../../../mocks/mockService';
+import { wrapResponse } from '../../../services/apiResponse';
 
 export interface ResolveTicketInput {
   partsUsed?: { name: string; cost: number }[];
@@ -21,7 +21,7 @@ export const serviceService = {
    * Retrieves all service and maintenance tickets
    */
   async getServiceTickets(): Promise<ApiResponse<ServiceTicket[]>> {
-    return simulateMockApiCall<ServiceTicket[]>([...serviceTickets], 350);
+    return wrapResponse<ServiceTicket[]>([...serviceTickets]);
   },
 
   /**
@@ -30,7 +30,7 @@ export const serviceService = {
   async createTicket(data: ServiceTicketFormData): Promise<ApiResponse<ServiceTicket>> {
     const customer = customers.find((c) => c.id === data.customerId);
     const count = serviceTickets.length + 1;
-    const ticketNumber = `TKT-2024-${String(count).padStart(3, '0')}`;
+    const ticketNumber = `TKT-2026-${String(count).padStart(3, '0')}`;
 
     // Auto-check warranty coverage by serial number
     let isUnderWarranty = false;
@@ -44,20 +44,6 @@ export const serviceService = {
       }
     }
 
-    const techName = data.assignedTechnicianId
-      ? data.assignedTechnicianId === 'tech-01'
-        ? 'Manoj Kumar'
-        : data.assignedTechnicianId === 'tech-02'
-        ? 'Deepak Joshi'
-        : data.assignedTechnicianId === 'tech-03'
-        ? 'Amit Rawat'
-        : data.assignedTechnicianId === 'tech-06'
-        ? 'Pawan Yadav'
-        : data.assignedTechnicianId === 'tech-09'
-        ? 'Gaurav Bisht'
-        : 'Assigned Technician'
-      : undefined;
-
     const initialLabour = isUnderWarranty ? 0 : 1200;
     const initialBill = isUnderWarranty ? 0 : 1200;
 
@@ -66,7 +52,7 @@ export const serviceService = {
       ticketNumber,
       customerId: data.customerId,
       customerName: customer?.name || 'Customer',
-      customerPhone: customer?.phone || '9876543210',
+      customerPhone: customer?.phone || '—',
       serialNumber: data.serialNumber ? data.serialNumber.trim() : undefined,
       warrantyRecordId,
       isUnderWarranty,
@@ -75,7 +61,7 @@ export const serviceService = {
       priority: data.priority,
       status: data.assignedTechnicianId ? 'ASSIGNED' : 'OPEN',
       assignedTechnicianId: data.assignedTechnicianId || undefined,
-      assignedTechnicianName: techName,
+      assignedTechnicianName: data.assignedTechnicianId ? 'Field Technician' : undefined,
       partsUsed: [],
       labourCost: initialLabour,
       totalBillAmount: initialBill,
@@ -84,7 +70,7 @@ export const serviceService = {
     };
 
     addServiceTicket(newTicket);
-    return simulateMockApiCall<ServiceTicket>({ ...newTicket }, 350);
+    return wrapResponse<ServiceTicket>(newTicket, 'Ticket created successfully');
   },
 
   /**
@@ -99,11 +85,7 @@ export const serviceService = {
       updatedAt: new Date().toISOString(),
     });
 
-    if (!updated) {
-      throw new Error(`Service ticket with id ${id} not found`);
-    }
-
-    return simulateMockApiCall<ServiceTicket>({ ...updated }, 350);
+    return wrapResponse<ServiceTicket>(updated, 'Ticket status updated');
   },
 
   /**
@@ -135,10 +117,6 @@ export const serviceService = {
       updatedAt: new Date().toISOString(),
     });
 
-    if (!updated) {
-      throw new Error(`Failed to resolve ticket with id ${id}`);
-    }
-
-    return simulateMockApiCall<ServiceTicket>({ ...updated }, 350);
+    return wrapResponse<ServiceTicket>(updated, 'Ticket resolved successfully');
   },
 };

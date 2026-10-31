@@ -49,16 +49,22 @@ Enterprise-grade Solar Installation Management System (ERP) designed for rooftop
 
 ---
 
-## 🔐 Default Demo Accounts
+## 🔐 Initial Setup & Authentication
 
-| Role | Email | Password | Access Scope |
-|:---|:---|:---|:---|
-| **System Administrator** | `admin@sunpowersolutions.in` | `Password@123` | Full Access + `/admin/users` |
-| **Managing Director** | `director@sunpowersolutions.in` | `Password@123` | Executive Dashboard, Finance, P&L, Operations |
-| **Sales Executive** | `sales@sunpowersolutions.in` | `Password@123` | Leads, Surveys, Quotes, Proposals |
-| **Field Technician** | `tech@sunpowersolutions.in` | `Password@123` | Surveys, Installations, Commissioning |
-| **Warehouse Manager** | `warehouse@sunpowersolutions.in` | `Password@123` | Inventory, Stock, Dispatch, Serials |
-| **Support Agent** | `support@sunpowersolutions.in` | `Password@123` | Tickets, Warranties, Customer Care |
+The platform starts in a clean production-ready state with **zero pre-seeded mock data or hardcoded credentials**:
+
+1. **First-Time System Initialization**:
+   - Navigate to `/register` or click **"First-Time Setup? Register"** on the Admin Login Portal (`/admin/login`).
+   - The very first account registered is automatically designated as the **System Administrator (ACTIVE)**.
+   - Subsequent employee registrations are created with `PENDING_APPROVAL` status and reviewed by the Administrator in the **User Management (`/admin/users`)** module.
+
+2. **Backend API Integration**:
+   - Centralized HTTP API Client (`src/services/apiClient.ts`) handles JWT Bearer tokens and REST requests.
+   - Refer to [`BACKEND_SPEC.md`](BACKEND_SPEC.md) for the complete REST API specification covering endpoints, request bodies, and JSON models.
+   - Point your backend server by configuring `VITE_API_BASE_URL` in `.env`:
+     ```env
+     VITE_API_BASE_URL=http://localhost:5000/api
+     ```
 
 ---
 

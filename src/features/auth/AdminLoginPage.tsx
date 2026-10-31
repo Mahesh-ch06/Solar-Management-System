@@ -125,9 +125,12 @@ export const AdminLoginPage: React.FC = () => {
               <span>Return to Standard Staff Login</span>
             </Link>
 
-            <span className="text-[11px] text-slate-500">
-              admin@sunpowersolutions.in (Password@123)
-            </span>
+            <Link
+              to="/register"
+              className="text-[11px] text-purple-400 hover:text-purple-300 font-medium transition-colors"
+            >
+              First-Time Setup? Register
+            </Link>
           </div>
         </Card>
       </div>

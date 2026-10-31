@@ -9,7 +9,7 @@ import {
   customers,
   inventoryItems,
 } from '../../../store/inMemoryDb';
-import { simulateMockApiCall } from '../../../mocks/mockService';
+import { wrapResponse } from '../../../services/apiResponse';
 
 export interface CreateDispatchInput {
   orderId?: string;
@@ -30,8 +30,7 @@ export const dispatchService = {
    * Retrieves all dispatch orders
    */
   async getDispatchOrders(): Promise<ApiResponse<DispatchOrder[]>> {
-    // Return clone of dispatch orders
-    return simulateMockApiCall<DispatchOrder[]>([...dispatchOrders], 350);
+    return wrapResponse<DispatchOrder[]>([...dispatchOrders]);
   },
 
   /**
@@ -39,7 +38,7 @@ export const dispatchService = {
    */
   async getDispatchById(id: string): Promise<ApiResponse<DispatchOrder | null>> {
     const order = dispatchOrders.find((d) => d.id === id) || null;
-    return simulateMockApiCall<DispatchOrder | null>(order ? { ...order } : null, 350);
+    return wrapResponse<DispatchOrder | null>(order ? { ...order } : null);
   },
 
   /**
@@ -48,16 +47,16 @@ export const dispatchService = {
   async createDispatch(data: CreateDispatchInput): Promise<ApiResponse<DispatchOrder>> {
     const customer = customers.find((c) => c.id === data.customerId);
     const count = dispatchOrders.length + 1;
-    const dispatchNumber = `DSP-2024-${String(count).padStart(3, '0')}`;
+    const dispatchNumber = `DSP-2026-${String(count).padStart(3, '0')}`;
 
     const newDispatch: DispatchOrder = {
       id: `dsp-${Date.now()}`,
       dispatchNumber,
       orderId: data.orderId || `ord-${Date.now()}`,
       customerId: data.customerId,
-      customerName: data.customerName || customer?.name || 'Valued Customer',
+      customerName: data.customerName || customer?.name || 'Customer',
       customerAddress:
-        data.customerAddress || customer?.address || 'Site Address, Gurugram',
+        data.customerAddress || customer?.address || 'Site Address',
       items: data.items.map((item) => ({
         inventoryItemId: item.inventoryItemId,
         itemName: item.itemName,
@@ -71,7 +70,7 @@ export const dispatchService = {
     };
 
     addDispatchOrder(newDispatch);
-    return simulateMockApiCall<DispatchOrder>({ ...newDispatch }, 350);
+    return wrapResponse<DispatchOrder>(newDispatch, 'Dispatch order created');
   },
 
   /**
@@ -103,16 +102,11 @@ export const dispatchService = {
       updatedAt: new Date().toISOString(),
     });
 
-    if (!updated) {
-      throw new Error(`Failed to update dispatch order ${id}`);
-    }
-
-    return simulateMockApiCall<DispatchOrder>({ ...updated }, 350);
+    return wrapResponse<DispatchOrder>(updated, 'Serial numbers assigned successfully');
   },
 
   /**
    * Marks dispatch order as DISPATCHED and automatically creates warranty records
-   * for each serial number based on item's warrantyYears
    */
   async markDispatched(
     id: string,
@@ -149,11 +143,11 @@ export const dispatchService = {
             inventoryItemId: item.inventoryItemId,
             itemName: item.itemName,
             itemCategory: invItem?.category || 'SOLAR_PANEL',
-            brand: invItem?.brand || 'SunPower OEM',
+            brand: invItem?.brand || 'Solar OEM',
             model: invItem?.model || item.itemName,
             customerId: existing.customerId,
             customerName: existing.customerName,
-            customerPhone: customer?.phone || '9876543210',
+            customerPhone: customer?.phone || '—',
             dispatchOrderId: existing.id,
             dispatchDate: nowIso,
             warrantyYears,
@@ -175,11 +169,7 @@ export const dispatchService = {
       updatedAt: nowIso,
     });
 
-    if (!updated) {
-      throw new Error(`Failed to update dispatch order ${id}`);
-    }
-
-    return simulateMockApiCall<DispatchOrder>({ ...updated }, 350);
+    return wrapResponse<DispatchOrder>(updated, 'Order marked as dispatched');
   },
 
   /**
@@ -193,10 +183,6 @@ export const dispatchService = {
       updatedAt: nowIso,
     });
 
-    if (!updated) {
-      throw new Error(`Dispatch order with id ${id} not found`);
-    }
-
-    return simulateMockApiCall<DispatchOrder>({ ...updated }, 350);
+    return wrapResponse<DispatchOrder>(updated, 'Order marked as delivered');
   },
 };

@@ -1,6 +1,6 @@
-import { DashboardData, DashboardKPIs, PendingTask, RecentActivity } from '../../../types/dashboard';
+import { DashboardData, DashboardKPIs, PendingTask, RecentActivity, MonthlyTrendData } from '../../../types/dashboard';
 import { ApiResponse } from '../../../types/common';
-import { simulateMockApiCall } from '../../../mocks/mockService';
+import { wrapResponse } from '../../../services/apiResponse';
 import {
   customers,
   quotations,
@@ -11,11 +11,10 @@ import {
   surveys,
   dispatchOrders,
 } from '../../../store/inMemoryDb';
-import { MOCK_DASHBOARD_DATA } from '../../../mocks/data/mockDashboard';
 
 export const dashboardService = {
   async getDashboardData(): Promise<ApiResponse<DashboardData>> {
-    // 1. Calculate dynamic KPIs directly from live database state
+    // 1. Calculate live KPIs directly from database collections
     const pendingQuotes = quotations.filter((q) => q.status === 'DRAFT' || q.status === 'SENT');
     const pendingQuotesTotal = pendingQuotes.reduce((acc, q) => acc + q.totalAmount, 0);
 
@@ -41,26 +40,26 @@ export const dashboardService = {
 
     // Financial revenue computed from confirmed orders
     const totalOrderRevenue = orders.reduce((acc, o) => acc + o.totalAmount, 0);
-    const monthlyRev = totalOrderRevenue > 0 ? totalOrderRevenue : 4850000;
-    const monthlyExp = Math.round(monthlyRev * 0.738);
+    const monthlyRev = totalOrderRevenue;
+    const monthlyExp = Math.round(monthlyRev * 0.72);
     const estProfit = monthlyRev - monthlyExp;
-    const profitMargin = Number(((estProfit / monthlyRev) * 100).toFixed(1));
+    const profitMargin = monthlyRev > 0 ? Number(((estProfit / monthlyRev) * 100).toFixed(1)) : 0;
 
     const liveKPIs: DashboardKPIs = {
       totalEnquiries: {
         value: customers.length,
-        trend: 14.5,
-        newThisWeek: Math.max(1, customers.filter((c) => c.status === 'NEW').length),
+        trend: 0,
+        newThisWeek: customers.filter((c) => c.status === 'NEW').length,
       },
       pendingQuotations: {
         value: pendingQuotes.length,
-        totalAmount: pendingQuotesTotal || 845000,
+        totalAmount: pendingQuotesTotal,
         urgentCount: pendingQuotes.filter((q) => q.status === 'SENT').length,
       },
       confirmedOrders: {
         value: orders.length,
-        totalCapacityKW: orders.reduce((acc, o) => acc + o.capacityKW, 0) || 12,
-        avgOrderValue: orders.length > 0 ? Math.round(totalOrderRevenue / orders.length) : 340000,
+        totalCapacityKW: orders.reduce((acc, o) => acc + o.capacityKW, 0),
+        avgOrderValue: orders.length > 0 ? Math.round(totalOrderRevenue / orders.length) : 0,
       },
       activeInstallations: {
         value: activeInstalls.length,
@@ -68,9 +67,9 @@ export const dashboardService = {
         scheduledThisWeek: installationJobs.filter((j) => j.stage === 'SCHEDULED').length,
       },
       completedInstallations: {
-        value: completedInstalls.length || 38,
+        value: completedInstalls.length,
         monthlyTarget: 40,
-        onTimeRate: 95.0,
+        onTimeRate: completedInstalls.length > 0 ? 95.0 : 0,
       },
       availableInventory: {
         solarPanelsCount: panelsStock,
@@ -81,7 +80,7 @@ export const dashboardService = {
       openServiceTickets: {
         value: openTickets.length,
         criticalCount: criticalTickets.length,
-        avgResolutionHours: 4.8,
+        avgResolutionHours: 0,
       },
       financials: {
         monthlyRevenue: monthlyRev,
@@ -94,7 +93,6 @@ export const dashboardService = {
     // 2. Derive dynamic Pending Tasks from real entities
     const dynamicTasks: PendingTask[] = [];
 
-    // Pending surveys
     const pendingSurvey = surveys.find((s) => s.status === 'PENDING' || s.status === 'SCHEDULED');
     if (pendingSurvey) {
       dynamicTasks.push({
@@ -104,13 +102,12 @@ export const dashboardService = {
         priority: 'HIGH',
         customerName: pendingSurvey.customerName,
         systemSize: `${pendingSurvey.recommendedCapacityKW || 3} kW`,
-        dueDate: pendingSurvey.scheduledDate || 'Today, 2:00 PM',
+        dueDate: pendingSurvey.scheduledDate || 'Today',
         assignedTo: pendingSurvey.assignedTechnicianName,
         statusText: pendingSurvey.status === 'SCHEDULED' ? 'Scheduled with Customer' : 'Unassigned Survey',
       });
     }
 
-    // Pending dispatches
     const pendingDispatch = dispatchOrders.find((d) => d.status === 'PENDING_SERIAL');
     if (pendingDispatch) {
       dynamicTasks.push({
@@ -119,100 +116,124 @@ export const dashboardService = {
         category: 'DISPATCH',
         priority: 'CRITICAL',
         customerName: pendingDispatch.customerName,
-        systemSize: 'Inverter + Panels',
-        dueDate: 'Today, 4:00 PM',
+        systemSize: `Order ${pendingDispatch.dispatchNumber}`,
+        dueDate: 'Immediate',
         assignedTo: 'Warehouse Team',
-        statusText: 'Serial Numbers Pending',
+        statusText: 'Awaiting Serial Scanning',
       });
     }
 
-    // Open tickets
-    const criticalTicket = serviceTickets.find((t) => t.priority === 'CRITICAL' && t.status !== 'RESOLVED');
-    if (criticalTicket) {
+    const pendingInstall = installationJobs.find((j) => j.stage === 'IN_PROGRESS' || j.stage === 'TESTING');
+    if (pendingInstall) {
       dynamicTasks.push({
-        id: `task-tkt-${criticalTicket.id}`,
-        title: `Urgent Fault Diagnosis (${criticalTicket.faultCode || 'E04'})`,
-        category: 'SERVICE',
-        priority: 'CRITICAL',
-        customerName: criticalTicket.customerName,
-        systemSize: 'Under Warranty',
-        dueDate: 'Within 2 Hours',
-        assignedTo: criticalTicket.assignedTechnicianName || 'Manoj Kumar',
-        statusText: 'Technician Dispatched',
-      });
-    }
-
-    // Installations in progress
-    const activeInstall = installationJobs.find((j) => j.stage === 'IN_PROGRESS');
-    if (activeInstall) {
-      dynamicTasks.push({
-        id: `task-inst-${activeInstall.id}`,
-        title: `On-Roof Commissioning & Customer Signoff`,
+        id: `task-inst-${pendingInstall.id}`,
+        title: `Electrical Commissioning & Inspection`,
         category: 'COMMISSIONING',
         priority: 'HIGH',
-        customerName: activeInstall.customerName,
-        systemSize: `${activeInstall.capacityKW} kW ${activeInstall.systemType}`,
-        dueDate: 'Today, 5:30 PM',
-        assignedTo: activeInstall.leadTechnicianName,
-        statusText: 'Under Assembly & Testing',
+        customerName: pendingInstall.customerName,
+        systemSize: `${pendingInstall.capacityKW} kW`,
+        dueDate: 'Today',
+        assignedTo: pendingInstall.leadTechnicianName,
+        statusText: 'Ready for Testing',
       });
     }
 
-    // Fallback tasks if database is small
-    if (dynamicTasks.length === 0) {
-      dynamicTasks.push(...MOCK_DASHBOARD_DATA.pendingTasks.slice(0, 4));
+    const urgentTicket = serviceTickets.find((t) => t.status === 'OPEN' || t.status === 'ASSIGNED');
+    if (urgentTicket) {
+      dynamicTasks.push({
+        id: `task-tkt-${urgentTicket.id}`,
+        title: `Customer Service Request (${urgentTicket.faultCode})`,
+        category: 'SERVICE',
+        priority: urgentTicket.priority === 'CRITICAL' ? 'CRITICAL' : 'HIGH',
+        customerName: urgentTicket.customerName,
+        systemSize: `Ticket ${urgentTicket.ticketNumber}`,
+        dueDate: '24 Hours SLA',
+        assignedTo: urgentTicket.assignedTechnicianName || 'Support Desk',
+        statusText: urgentTicket.status,
+      });
     }
 
-    // 3. Derive Dynamic Recent Activities from actual database state
-    const now = Date.now();
-    const dynamicActivities: RecentActivity[] = [
-      {
-        id: 'act-01',
-        timestamp: new Date(now - 2 * 60 * 1000).toISOString(),
+    // 3. Dynamic Recent Activities (clean audit log from store entities)
+    const dynamicActivities: RecentActivity[] = [];
+
+    if (installationJobs.length > 0) {
+      const latestJob = installationJobs[0];
+      dynamicActivities.push({
+        id: 'act-install',
+        timestamp: latestJob.updatedAt || latestJob.scheduledStartDate,
         type: 'INSTALLATION',
         title: `Installation Progress Updated`,
-        description: `${installationJobs[0]?.customerName || 'Customer'} rooftop mounting verified on-site.`,
-        user: installationJobs[0]?.leadTechnicianName || 'Manoj Kumar',
+        description: `${latestJob.customerName} rooftop stage: ${latestJob.stage}.`,
+        user: latestJob.leadTechnicianName || 'Operations',
         badgeType: 'emerald',
-      },
-      {
-        id: 'act-02',
-        timestamp: new Date(now - 15 * 60 * 1000).toISOString(),
+      });
+    }
+
+    if (customers.length > 0) {
+      const latestCustomer = customers[0];
+      dynamicActivities.push({
+        id: 'act-enquiry',
+        timestamp: latestCustomer.createdAt,
         type: 'ENQUIRY',
         title: `New Solar Inquiry Registered`,
-        description: `${customers[0]?.name || 'Rajesh Malhotra'} requested ${customers[0]?.requiredCapacityKW || 5} kW system proposal.`,
-        user: customers[0]?.assignedTo || 'Vikram Mehta',
+        description: `${latestCustomer.name} requested ${latestCustomer.requiredCapacityKW} kW proposal.`,
+        user: latestCustomer.assignedTo || 'Sales',
         badgeType: 'sky',
-      },
-      {
-        id: 'act-03',
-        timestamp: new Date(now - 60 * 60 * 1000).toISOString(),
+      });
+    }
+
+    if (dispatchOrders.length > 0) {
+      const latestDispatch = dispatchOrders[0];
+      dynamicActivities.push({
+        id: 'act-dispatch',
+        timestamp: latestDispatch.createdAt,
         type: 'DISPATCH',
-        title: `Serial Numbers Scanned for Dispatch`,
-        description: `Kit prepared for ${dispatchOrders[0]?.customerName || 'Sunita Sharma'} (${dispatchOrders[0]?.dispatchNumber || 'DSP-01'}).`,
-        user: 'Suresh Patel (Warehouse)',
-        badgeType: 'purple',
-      },
-      {
-        id: 'act-04',
-        timestamp: new Date(now - 2 * 60 * 60 * 1000).toISOString(),
+        title: `Dispatch Order Created`,
+        description: `Kit for ${latestDispatch.customerName} (${latestDispatch.dispatchNumber}).`,
+        user: 'Warehouse',
+        badgeType: 'amber',
+      });
+    }
+
+    if (serviceTickets.length > 0) {
+      const latestTicket = serviceTickets[0];
+      dynamicActivities.push({
+        id: 'act-ticket',
+        timestamp: latestTicket.createdAt,
         type: 'SERVICE',
-        title: `Service Complaint Ticket Logged`,
-        description: `Ticket ${serviceTickets[0]?.ticketNumber || 'TKT-01'} logged for ${serviceTickets[0]?.customerName || 'Amitabh Sen'}.`,
-        user: 'Pooja Nair (Support)',
-        badgeType: 'rose',
+        title: `Service Ticket Logged`,
+        description: `Ticket ${latestTicket.ticketNumber} for ${latestTicket.customerName}.`,
+        user: latestTicket.assignedTechnicianName || 'Support Desk',
+        badgeType: 'purple',
+      });
+    }
+
+    // 4. Monthly Trend Data (Dynamically aggregated)
+    const monthlyTrends: MonthlyTrendData[] = [
+      { month: 'May', planned: 0, completed: 0, capacityKW: 0, revenueLakhs: 0, expensesLakhs: 0 },
+      { month: 'Jun', planned: 0, completed: 0, capacityKW: 0, revenueLakhs: 0, expensesLakhs: 0 },
+      { month: 'Jul', planned: 0, completed: 0, capacityKW: 0, revenueLakhs: 0, expensesLakhs: 0 },
+      { month: 'Aug', planned: 0, completed: 0, capacityKW: 0, revenueLakhs: 0, expensesLakhs: 0 },
+      { month: 'Sep', planned: 0, completed: 0, capacityKW: 0, revenueLakhs: 0, expensesLakhs: 0 },
+      {
+        month: 'Oct',
+        planned: 0,
+        completed: completedInstalls.length,
+        capacityKW: orders.reduce((acc, o) => acc + o.capacityKW, 0),
+        revenueLakhs: Number((monthlyRev / 100000).toFixed(2)),
+        expensesLakhs: Number((monthlyExp / 100000).toFixed(2)),
       },
     ];
 
-    const compositeData: DashboardData = {
+    const data: DashboardData = {
       kpis: liveKPIs,
-      monthlyTrends: MOCK_DASHBOARD_DATA.monthlyTrends,
-      technicians: MOCK_DASHBOARD_DATA.technicians,
+      monthlyTrends,
+      technicians: [],
       recentActivities: dynamicActivities,
       pendingTasks: dynamicTasks,
-      lastUpdated: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+      lastUpdated: new Date().toISOString(),
     };
 
-    return simulateMockApiCall(compositeData, 250);
+    return wrapResponse<DashboardData>(data);
   },
 };

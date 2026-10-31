@@ -1,11 +1,11 @@
 import { InstallationJob, InstallationStage, InstallationChecklist } from '../../../types/installation';
 import { installationJobs, addInstallationJob, updateInstallationJob } from '../../../store/inMemoryDb';
 import { ApiResponse } from '../../../types/common';
-import { simulateMockApiCall } from '../../../mocks/mockService';
+import { wrapResponse } from '../../../services/apiResponse';
 
 export const installationService = {
   async getInstallationJobs(): Promise<ApiResponse<InstallationJob[]>> {
-    return simulateMockApiCall([...installationJobs], 350);
+    return wrapResponse<InstallationJob[]>([...installationJobs]);
   },
 
   async getInstallationJobById(id: string): Promise<ApiResponse<InstallationJob>> {
@@ -13,12 +13,12 @@ export const installationService = {
     if (!job) {
       throw new Error(`Installation job "${id}" not found`);
     }
-    return simulateMockApiCall({ ...job }, 250);
+    return wrapResponse<InstallationJob>({ ...job });
   },
 
   async updateJobStage(id: string, stage: InstallationStage): Promise<ApiResponse<InstallationJob>> {
     const updated = updateInstallationJob(id, { stage });
-    return simulateMockApiCall(updated, 300);
+    return wrapResponse<InstallationJob>(updated, 'Job stage updated');
   },
 
   async submitCommissioning(
@@ -42,11 +42,11 @@ export const installationService = {
       completionReportNumber,
     });
 
-    return simulateMockApiCall(updated, 400);
+    return wrapResponse<InstallationJob>(updated, 'Commissioning report submitted successfully');
   },
 
   async createJob(data: Omit<InstallationJob, 'id' | 'jobCode' | 'createdAt' | 'updatedAt'>): Promise<ApiResponse<InstallationJob>> {
     const created = addInstallationJob(data as InstallationJob);
-    return simulateMockApiCall(created, 350);
+    return wrapResponse<InstallationJob>(created, 'Installation job created');
   },
 };

@@ -3,7 +3,7 @@ export interface ApiResponse<T> {
   message?: string;
   success: boolean;
   timestamp: string;
-  isMockData: boolean;
+  isMockData?: boolean;
 }
 
 export interface PaginatedResult<T> {

@@ -12,13 +12,13 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (credentials: LoginFormData, isAdminPortal?: boolean) => Promise<{ success: boolean; error?: string }>;
-  register: (data: RegisterFormData) => Promise<{ success: boolean; error?: string; message?: string }>;
+  register: (data: RegisterFormData) => Promise<{ success: boolean; error?: string; message?: string; isInitialAdmin?: boolean }>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const AUTH_STORAGE_KEY = 'sunpower_auth_session_v2';
+const AUTH_STORAGE_KEY = 'sunpower_auth_session_v3';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
@@ -27,6 +27,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Restore authenticated session from localStorage on initialization
   useEffect(() => {
     try {
+      localStorage.removeItem('sunpower_auth_session');
+      localStorage.removeItem('sunpower_auth_session_v2');
+
       const stored = localStorage.getItem(AUTH_STORAGE_KEY);
       if (stored) {
         const parsed: UserAccount = JSON.parse(stored);
@@ -39,12 +42,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setCurrentUser(null);
         }
       } else {
-        // Default initial session for developer convenience: Admin account
-        const defaultAdmin = users.find((u) => u.role === 'ADMIN');
-        if (defaultAdmin) {
-          setCurrentUser(defaultAdmin);
-          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(defaultAdmin));
-        }
+        setCurrentUser(null);
       }
     } catch (e) {
       console.warn('[AuthProvider] Failed to parse auth session:', e);
@@ -109,7 +107,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    */
   const register = async (
     data: RegisterFormData
-  ): Promise<{ success: boolean; error?: string; message?: string }> => {
+  ): Promise<{ success: boolean; error?: string; message?: string; isInitialAdmin?: boolean }> => {
     setIsLoading(true);
     try {
       const existing = getUserByEmail(data.email);
@@ -139,9 +137,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ).catch((err) => console.warn('Admin notification error:', err));
       }
 
+      const isInitialAdmin = newUser.role === 'ADMIN' && newUser.status === 'ACTIVE';
+
       return {
         success: true,
-        message: 'Registration submitted successfully! Your account is pending administrator review and role assignment.',
+        isInitialAdmin,
+        message: isInitialAdmin
+          ? 'System Bootstrap Complete! You are registered as the initial System Administrator.'
+          : 'Registration submitted successfully! Your account is pending administrator review and role assignment.',
       };
     } finally {
       setIsLoading(false);

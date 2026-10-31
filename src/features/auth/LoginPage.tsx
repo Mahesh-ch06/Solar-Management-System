@@ -6,7 +6,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
 import { useToast } from '../../context/ToastContext';
-import { SunMedium, ArrowRight, Lock, Mail, Shield, AlertCircle, Info } from 'lucide-react';
+import { SunMedium, ArrowRight, Lock, Mail, Shield, AlertCircle } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -17,7 +17,6 @@ export const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [showDemoCredentials, setShowDemoCredentials] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,31 +125,6 @@ export const LoginPage: React.FC = () => {
               <Shield className="w-3.5 h-3.5 text-solar-500" />
               <span>Admin Portal</span>
             </Link>
-          </div>
-
-          {/* Collapsible Testing Credentials Guide (Without Impersonation) */}
-          <div className="mt-4 pt-3 border-t border-slate-800/40">
-            <button
-              type="button"
-              onClick={() => setShowDemoCredentials(!showDemoCredentials)}
-              className="w-full flex items-center justify-between text-[11px] text-slate-500 hover:text-slate-400 py-1"
-            >
-              <span className="flex items-center gap-1">
-                <Info className="w-3 h-3 text-slate-400" />
-                Staff Test Credentials Guide
-              </span>
-              <span>{showDemoCredentials ? '▲ Hide' : '▼ View'}</span>
-            </button>
-
-            {showDemoCredentials && (
-              <div className="mt-2 p-2.5 rounded-lg bg-slate-950/60 border border-slate-800 text-[11px] space-y-1 text-slate-400">
-                <p><strong className="text-slate-300">Sales:</strong> sales@sunpowersolutions.in (Password@123)</p>
-                <p><strong className="text-slate-300">Technician:</strong> tech@sunpowersolutions.in (Password@123)</p>
-                <p><strong className="text-slate-300">Warehouse:</strong> warehouse@sunpowersolutions.in (Password@123)</p>
-                <p><strong className="text-slate-300">Support:</strong> support@sunpowersolutions.in (Password@123)</p>
-                <p><strong className="text-slate-300">Director:</strong> director@sunpowersolutions.in (Password@123)</p>
-              </div>
-            )}
           </div>
         </Card>
       </div>

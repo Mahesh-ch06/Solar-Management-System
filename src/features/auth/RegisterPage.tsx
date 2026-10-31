@@ -22,6 +22,7 @@ export const RegisterPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isRegisteredSuccess, setIsRegisteredSuccess] = useState(false);
+  const [isInitialAdminCreated, setIsInitialAdminCreated] = useState(false);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,8 +59,14 @@ export const RegisterPage: React.FC = () => {
         return;
       }
 
+      if (result.isInitialAdmin) {
+        setIsInitialAdminCreated(true);
+        showToast('Initial Setup Complete', 'Administrator account created successfully!', 'success');
+      } else {
+        showToast('Registration Submitted', 'Your account is pending administrator activation.', 'success');
+      }
+
       setIsRegisteredSuccess(true);
-      showToast('Registration Submitted', 'Your account is pending administrator activation.', 'success');
     } catch {
       setErrorMessage('A network error occurred while submitting your registration.');
     } finally {
@@ -75,10 +82,10 @@ export const RegisterPage: React.FC = () => {
           <SunMedium className="w-6 h-6" />
         </div>
         <h1 className="text-xl font-bold text-white tracking-tight">
-          Staff Account Registration
+          {isInitialAdminCreated ? 'System Initial Setup' : 'Staff Account Registration'}
         </h1>
         <p className="mt-1 text-xs text-slate-400">
-          Join SunPower Solutions Operations Team
+          SunPower Solutions Solar Operations Platform
         </p>
       </div>
 
@@ -90,17 +97,30 @@ export const RegisterPage: React.FC = () => {
                 <CheckCircle2 className="w-8 h-8" />
               </div>
 
-              <div>
-                <h3 className="text-base font-bold text-white">Application Received</h3>
-                <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-                  Your employee profile has been registered and is currently in status{' '}
-                  <span className="font-semibold text-amber-400">PENDING_APPROVAL</span>.
-                </p>
-                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                  An administrator has been notified. You will be assigned your authorized role
-                  and receive an email confirmation once activated.
-                </p>
-              </div>
+              {isInitialAdminCreated ? (
+                <div>
+                  <h3 className="text-base font-bold text-white">System Administrator Created</h3>
+                  <p className="text-xs text-slate-300 mt-2 leading-relaxed">
+                    Initial bootstrap setup complete! Your account has been provisioned as the{' '}
+                    <span className="font-semibold text-emerald-400">System Administrator (ACTIVE)</span>.
+                  </p>
+                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                    You have complete administrative authority to manage user roles, operational workflows, and system parameters.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <h3 className="text-base font-bold text-white">Application Received</h3>
+                  <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                    Your employee profile has been registered and is currently in status{' '}
+                    <span className="font-semibold text-amber-400">PENDING_APPROVAL</span>.
+                  </p>
+                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                    An administrator has been notified. You will be assigned your authorized role
+                    and receive an email confirmation once activated.
+                  </p>
+                </div>
+              )}
 
               <div className="pt-4">
                 <Button
@@ -108,9 +128,9 @@ export const RegisterPage: React.FC = () => {
                   size="md"
                   className="w-full"
                   leftIcon={<ArrowLeft className="w-4 h-4" />}
-                  onClick={() => navigate('/login')}
+                  onClick={() => navigate(isInitialAdminCreated ? '/admin/login' : '/login')}
                 >
-                  Return to Staff Login
+                  {isInitialAdminCreated ? 'Proceed to Admin Portal' : 'Return to Staff Login'}
                 </Button>
               </div>
             </div>
