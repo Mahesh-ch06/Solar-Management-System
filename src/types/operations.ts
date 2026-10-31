@@ -45,6 +45,7 @@ export interface WarrantyRecord {
   customerId: string;
   customerName: string;
   customerPhone: string;
+  customerEmail?: string;
   dispatchOrderId: string;
   dispatchDate: string;
   warrantyYears: number;

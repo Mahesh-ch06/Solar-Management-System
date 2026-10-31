@@ -188,4 +188,144 @@ export const emailService = {
       action_label: 'Log In Now',
     });
   },
+
+  /**
+   * Dispatched when an official customer invoice is generated or sent
+   */
+  async notifyCustomerInvoice(
+    payload: {
+      toEmail: string;
+      customerName: string;
+      invoiceNumber: string;
+      orderNumber?: string;
+      capacityKW: number;
+      systemType?: string;
+      totalAmount: number;
+      advancePaid: number;
+      balanceDue: number;
+      subsidyAmount?: number;
+      paymentStatus?: string;
+    }
+  ): Promise<EmailSendResult> {
+    const formattedTotal = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(payload.totalAmount);
+    const formattedAdvance = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(payload.advancePaid);
+    const formattedBalance = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(payload.balanceDue);
+    const formattedSubsidy = payload.subsidyAmount 
+      ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(payload.subsidyAmount)
+      : '₹0';
+
+    return sendEmailNotification({
+      to_email: payload.toEmail,
+      to_name: payload.customerName,
+      subject: `Invoice & Billing Confirmation: ${payload.invoiceNumber} - SunPower Rooftop Solar`,
+      message:
+        `Dear ${payload.customerName},\n\n` +
+        `Thank you for choosing SunPower Solutions for your clean solar rooftop energy system. Here is your project invoice statement:\n\n` +
+        `-----------------------------------------\n` +
+        `INVOICE SUMMARY: ${payload.invoiceNumber}\n` +
+        `-----------------------------------------\n` +
+        `• Order Reference: ${payload.orderNumber || payload.invoiceNumber}\n` +
+        `• System Capacity: ${payload.capacityKW} kW (${payload.systemType === 'OFF_GRID' ? 'Hybrid / Off-Grid' : 'Grid-Tied'})\n` +
+        `• Total Project Cost: ${formattedTotal}\n` +
+        `• PM Surya Ghar Central Subsidy: ${formattedSubsidy}\n` +
+        `• Advance Received: ${formattedAdvance}\n` +
+        `• Outstanding Balance Due: ${formattedBalance}\n` +
+        `• Payment Status: ${payload.paymentStatus || (payload.balanceDue <= 0 ? 'PAID IN FULL' : 'PARTIALLY PAID')}\n\n` +
+        `You can monitor your project milestones and live DISCOM subsidy approvals via your Customer Tracking Portal.`,
+      action_url: `${window.location.origin}/track?ref=${encodeURIComponent(payload.orderNumber || payload.invoiceNumber)}`,
+      action_label: 'View Project Tracker & Invoice',
+      metadata: {
+        invoice_number: payload.invoiceNumber,
+        total_amount: formattedTotal,
+        balance_due: formattedBalance,
+      },
+    });
+  },
+
+  /**
+   * Dispatched when equipment is dispatched or customer requests digital warranty certificate
+   */
+  async notifyWarrantyCertificate(
+    payload: {
+      toEmail: string;
+      customerName: string;
+      serialNumber: string;
+      itemName: string;
+      itemCategory?: string;
+      brand: string;
+      model: string;
+      warrantyYears: number;
+      warrantyExpiryDate: string;
+      dispatchDate: string;
+      status: string;
+    }
+  ): Promise<EmailSendResult> {
+    return sendEmailNotification({
+      to_email: payload.toEmail,
+      to_name: payload.customerName,
+      subject: `Official Warranty Certificate: ${payload.itemName} [SN: ${payload.serialNumber}]`,
+      message:
+        `Dear ${payload.customerName},\n\n` +
+        `We hereby certify that your solar equipment is formally covered under SunPower OEM Warranty and Service Level Agreement:\n\n` +
+        `-----------------------------------------\n` +
+        `WARRANTY CERTIFICATE & HARDWARE UID\n` +
+        `-----------------------------------------\n` +
+        `• Equipment: ${payload.itemName}\n` +
+        `• Brand / Model: ${payload.brand} • ${payload.model}\n` +
+        `• Unique Serial Number (UID): ${payload.serialNumber}\n` +
+        `• Warranty Duration: ${payload.warrantyYears} Years OEM Replacement Guarantee\n` +
+        `• Dispatch Date: ${payload.dispatchDate}\n` +
+        `• Coverage Expiry: ${payload.warrantyExpiryDate}\n` +
+        `• Current Status: ${payload.status}\n\n` +
+        `Please preserve your Hardware UID for future servicing, preventive maintenance, and warranty claims.\n\n` +
+        `Customer Care: +91 98101 23456 | support@sunpowersolutions.in`,
+      action_url: `${window.location.origin}/warranties?serial=${encodeURIComponent(payload.serialNumber)}`,
+      action_label: 'Verify Warranty Certificate',
+      metadata: {
+        serial_number: payload.serialNumber,
+        item_name: payload.itemName,
+        expiry_date: payload.warrantyExpiryDate,
+      },
+    });
+  },
+
+  /**
+   * Dispatched at each milestone stage in project tracking
+   */
+  async notifyTrackingStageUpdate(
+    payload: {
+      toEmail: string;
+      customerName: string;
+      stepTitle: string;
+      stepIndex: number;
+      totalSteps: number;
+      description: string;
+      referenceId: string;
+      nextMilestone?: string;
+    }
+  ): Promise<EmailSendResult> {
+    return sendEmailNotification({
+      to_email: payload.toEmail,
+      to_name: payload.customerName,
+      subject: `Project Update [Step ${payload.stepIndex} of ${payload.totalSteps}]: ${payload.stepTitle}`,
+      message:
+        `Dear ${payload.customerName},\n\n` +
+        `Your SunPower Rooftop Solar installation project has completed a new milestone!\n\n` +
+        `-----------------------------------------\n` +
+        `LIVE PROJECT MILESTONE\n` +
+        `-----------------------------------------\n` +
+        `• Application Reference: ${payload.referenceId}\n` +
+        `• Current Milestone: Step ${payload.stepIndex}/${payload.totalSteps} - ${payload.stepTitle}\n` +
+        `• Milestone Details: ${payload.description}\n` +
+        (payload.nextMilestone ? `• Next Action: ${payload.nextMilestone}\n\n` : '\n') +
+        `Track live photos, technical survey reports, and net meter approvals directly on your Customer Portal:`,
+      action_url: `${window.location.origin}/track?ref=${encodeURIComponent(payload.referenceId)}`,
+      action_label: 'Open Live Solar Tracker',
+      metadata: {
+        step_title: payload.stepTitle,
+        step_index: String(payload.stepIndex),
+        reference_id: payload.referenceId,
+      },
+    });
+  },
 };

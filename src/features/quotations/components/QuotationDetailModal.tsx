@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Modal } from '../../../components/ui/Modal';
 import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
 import { Quotation, QuotationStatus } from '../../../types/quotation';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
-import { Printer, Sun, Mail, Phone, MapPin, CheckCircle2 } from 'lucide-react';
+import { Printer, Sun, Mail, Phone, MapPin, CheckCircle2, Send } from 'lucide-react';
+import { emailService } from '../../../services/emailService';
+import { useToast } from '../../../context/ToastContext';
+import { customers } from '../../../store/inMemoryDb';
 
 export interface QuotationDetailModalProps {
   quotation: Quotation | null;
@@ -31,6 +34,9 @@ export const QuotationDetailModal: React.FC<QuotationDetailModalProps> = ({
   onClose,
   onConvertToOrder,
 }) => {
+  const { showToast } = useToast();
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+
   if (!quotation) return null;
 
   const statusConfig = statusBadgeConfig[quotation.status] || {
@@ -42,6 +48,46 @@ export const QuotationDetailModal: React.FC<QuotationDetailModalProps> = ({
     window.print();
   };
 
+  const handleEmailInvoice = async () => {
+    const cust = customers.find((c) => c.id === quotation.customerId);
+    const targetEmail = cust?.email || `${quotation.customerId}@customer.sunpower.in`;
+
+    try {
+      setIsSendingEmail(true);
+      const res = await emailService.notifyCustomerInvoice({
+        toEmail: targetEmail,
+        customerName: quotation.customerName,
+        invoiceNumber: quotation.quotationNumber,
+        capacityKW: quotation.capacityKW,
+        systemType: quotation.systemType,
+        totalAmount: quotation.totalAmount,
+        advancePaid: quotation.advancePaid,
+        balanceDue: quotation.balanceAmount,
+        subsidyAmount: quotation.subsidyAmount,
+        paymentStatus: quotation.balanceAmount <= 0 ? 'PAID IN FULL' : quotation.advancePaid > 0 ? 'PARTIALLY PAID' : 'PENDING',
+      });
+
+      if (res.isSimulatedFallback) {
+        showToast(
+          'Invoice Queued (Simulated)',
+          `Customer invoice for ${quotation.quotationNumber} queued for ${targetEmail}. (Configure EmailJS in .env for live sending)`,
+          'info'
+        );
+      } else {
+        showToast(
+          'Invoice Dispatched',
+          `Official invoice for ${quotation.quotationNumber} dispatched to ${targetEmail} via EmailJS.`,
+          'success'
+        );
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to send invoice';
+      showToast('Dispatch Error', msg, 'error');
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
   return (
     <Modal
       isOpen={isOpen}
@@ -50,7 +96,7 @@ export const QuotationDetailModal: React.FC<QuotationDetailModalProps> = ({
       description="Official Solar Installation Estimate & Bill of Materials"
       size="xl"
       footer={
-        <div className="w-full flex items-center justify-between">
+        <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs text-slate-500">
             <span>Issue Date: {formatDate(quotation.createdAt)}</span>
             <span>•</span>
@@ -68,11 +114,22 @@ export const QuotationDetailModal: React.FC<QuotationDetailModalProps> = ({
             >
               Print / Save PDF
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              isLoading={isSendingEmail}
+              leftIcon={<Send className="w-3.5 h-3.5 text-amber-600" />}
+              onClick={handleEmailInvoice}
+              className="border-amber-300 text-slate-900 hover:bg-amber-50 font-semibold"
+            >
+              Email Customer Invoice
+            </Button>
             {quotation.status === 'APPROVED' && onConvertToOrder && (
               <Button
                 variant="primary"
                 size="sm"
                 onClick={() => onConvertToOrder(quotation.id)}
+                className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold"
               >
                 Convert to Order
               </Button>
