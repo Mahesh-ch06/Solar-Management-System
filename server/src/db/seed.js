@@ -17,6 +17,7 @@ import { db } from './database.js';
 console.log('🌱 Starting SunPower Solar ERP database seed...');
 
 const defaultPasswordHash = bcrypt.hashSync('Password@123', 10);
+const nikhilPasswordHash = bcrypt.hashSync('123456', 10);
 
 // Clear existing tables
 db.exec(`
@@ -41,6 +42,7 @@ const insertUser = db.prepare(`
 `);
 
 const usersData = [
+  ['usr-admin-nikhil', 'Nikhil', 'nikhil@gmail.com', nikhilPasswordHash, '+91 98111 99999', 'ADMIN', 'Executive Management', 'ACTIVE', 'System Initializer', '2026-08-01T09:00:00Z', '2026-08-01T09:00:00Z'],
   ['usr-admin-01', 'Rajesh Sharma', 'admin@sunpowersolutions.in', defaultPasswordHash, '+91 98111 00001', 'ADMIN', 'Executive Management', 'ACTIVE', 'System Initializer', '2026-08-01T09:00:00Z', '2026-08-01T09:00:00Z'],
   ['usr-dir-01', 'Ananya Verma', 'director@sunpowersolutions.in', defaultPasswordHash, '+91 98111 00002', 'DIRECTOR', 'Board of Directors', 'ACTIVE', 'System Initializer', '2026-08-01T09:00:00Z', '2026-08-01T09:00:00Z'],
   ['usr-sales-01', 'Vikram Mehta', 'sales@sunpowersolutions.in', defaultPasswordHash, '+91 98111 00003', 'SALES', 'Commercial Solutions', 'ACTIVE', 'Rajesh Sharma (Admin)', '2026-08-15T10:00:00Z', '2026-08-15T10:00:00Z'],

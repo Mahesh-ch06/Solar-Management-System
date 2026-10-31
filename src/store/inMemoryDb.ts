@@ -24,7 +24,21 @@ export let dispatchOrders: DispatchOrder[] = [];
 export let warrantyRecords: WarrantyRecord[] = [];
 export let serviceTickets: ServiceTicket[] = [];
 export let installationJobs: InstallationJob[] = [];
-export let users: UserAccount[] = [];
+export let users: UserAccount[] = [
+  {
+    id: 'usr-admin-nikhil',
+    name: 'Nikhil',
+    email: 'nikhil@gmail.com',
+    password: '123456',
+    role: 'ADMIN',
+    status: 'ACTIVE',
+    phone: '+91 98111 99999',
+    department: 'Executive Management',
+    roleAssignedBy: 'System Initializer',
+    roleAssignedAt: '2026-08-01T09:00:00Z',
+    createdAt: '2026-08-01T09:00:00Z',
+  },
+];
 export let roleAuditLogs: RoleAuditEntry[] = [];
 
 // ==========================================
