@@ -101,7 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               id: userObj.id,
               name: userObj.name,
               email: userObj.email,
-              password: credentials.password,
+              password: '', // Plaintext password stripped for browser security
               phone: userObj.phone || '',
               role: userObj.role,
               department: userObj.department || '',
@@ -160,8 +160,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       }
 
-      setCurrentUser(user);
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+      const safeUser: UserAccount = { ...user, password: '' };
+      setCurrentUser(safeUser);
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(safeUser));
       return { success: true };
     } finally {
       setIsLoading(false);

@@ -122,6 +122,23 @@ export const surveyController = {
         });
       }
 
+      if (roofAreaSqFt !== undefined && Number(roofAreaSqFt) < 0) {
+        return res.status(400).json({ success: false, error: 'Roof area cannot be negative.' });
+      }
+      if (shadowFreeAreaSqFt !== undefined && Number(shadowFreeAreaSqFt) < 0) {
+        return res.status(400).json({ success: false, error: 'Shadow-free area cannot be negative.' });
+      }
+      if (
+        roofAreaSqFt !== undefined &&
+        shadowFreeAreaSqFt !== undefined &&
+        Number(shadowFreeAreaSqFt) > Number(roofAreaSqFt)
+      ) {
+        return res.status(400).json({
+          success: false,
+          error: 'Shadow-free area cannot exceed total roof area.',
+        });
+      }
+
       // Lookup customer if customerName not directly passed
       let resolvedCustomerName = customerName;
       const cust = db.prepare('SELECT id, name FROM customers WHERE id = ?').get(customerId);
@@ -232,6 +249,21 @@ export const surveyController = {
         rejectionReason,
         remarks,
       } = req.body;
+
+      const effectiveRoof = roofAreaSqFt !== undefined ? Number(roofAreaSqFt) : existing.roofAreaSqFt;
+      const effectiveShadow = shadowFreeAreaSqFt !== undefined ? Number(shadowFreeAreaSqFt) : existing.shadowFreeAreaSqFt;
+      if (effectiveRoof !== undefined && effectiveRoof < 0) {
+        return res.status(400).json({ success: false, error: 'Roof area cannot be negative.' });
+      }
+      if (effectiveShadow !== undefined && effectiveShadow < 0) {
+        return res.status(400).json({ success: false, error: 'Shadow-free area cannot be negative.' });
+      }
+      if (effectiveRoof !== undefined && effectiveShadow !== undefined && effectiveShadow > effectiveRoof) {
+        return res.status(400).json({
+          success: false,
+          error: 'Shadow-free area cannot exceed total roof area.',
+        });
+      }
 
       const update = db.prepare(`
         UPDATE surveys SET

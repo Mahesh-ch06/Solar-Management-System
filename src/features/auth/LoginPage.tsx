@@ -25,9 +25,16 @@ export const LoginPage: React.FC = () => {
       return;
     }
 
+    const trimmedEmail = email.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setErrorMessage('Please enter a valid email address.');
+      return;
+    }
+
     try {
       setIsSubmitting(true);
-      const result = await login({ email, password }, false);
+      const result = await login({ email: trimmedEmail, password }, false);
 
       if (!result.success) {
         setErrorMessage(result.error || 'Authentication failed. Please verify your credentials.');

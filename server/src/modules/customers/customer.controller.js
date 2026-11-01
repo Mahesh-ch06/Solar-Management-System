@@ -329,6 +329,42 @@ export const customerController = {
         });
       }
 
+      const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (email && typeof email === 'string' && email.trim() && !EMAIL_REGEX.test(email.trim())) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid email address format.',
+        });
+      }
+
+      const cleanDigits = String(phone).trim().replace(/\D/g, '');
+      if (cleanDigits.length < 10) {
+        return res.status(400).json({
+          success: false,
+          error: 'Phone number must contain at least 10 digits.',
+        });
+      }
+
+      if (monthlyBill !== undefined && monthlyBill !== null) {
+        const parsedBill = Number(monthlyBill);
+        if (isNaN(parsedBill) || parsedBill < 0) {
+          return res.status(400).json({
+            success: false,
+            error: 'Monthly electricity bill must be a non-negative number.',
+          });
+        }
+      }
+
+      if (requiredCapacityKW !== undefined && requiredCapacityKW !== null) {
+        const parsedKW = Number(requiredCapacityKW);
+        if (isNaN(parsedKW) || parsedKW <= 0 || parsedKW > 500) {
+          return res.status(400).json({
+            success: false,
+            error: 'Required solar capacity must be a positive number between 1 kW and 500 kW.',
+          });
+        }
+      }
+
       // Determine customer ID
       let id = customId;
       if (!id) {
@@ -462,6 +498,31 @@ export const customerController = {
         notes,
         assignedTo,
       } = req.body;
+
+      if (email !== undefined && email !== null && String(email).trim() && !EMAIL_REGEX.test(String(email).trim())) {
+        return res.status(400).json({ success: false, error: 'Invalid email address format.' });
+      }
+
+      if (phone !== undefined && phone !== null) {
+        const clean = String(phone).trim().replace(/\D/g, '');
+        if (clean.length < 10) {
+          return res.status(400).json({ success: false, error: 'Phone number must contain at least 10 digits.' });
+        }
+      }
+
+      if (monthlyBill !== undefined && monthlyBill !== null) {
+        const parsed = Number(monthlyBill);
+        if (isNaN(parsed) || parsed < 0) {
+          return res.status(400).json({ success: false, error: 'Monthly electricity bill must be a non-negative number.' });
+        }
+      }
+
+      if (requiredCapacityKW !== undefined && requiredCapacityKW !== null) {
+        const parsed = Number(requiredCapacityKW);
+        if (isNaN(parsed) || parsed <= 0 || parsed > 500) {
+          return res.status(400).json({ success: false, error: 'Required solar capacity must be a positive number between 1 kW and 500 kW.' });
+        }
+      }
 
       if (systemType && !['ON_GRID', 'OFF_GRID', 'HYBRID'].includes(systemType)) {
         return res.status(400).json({ success: false, error: 'Invalid systemType. Must be ON_GRID, OFF_GRID, or HYBRID.' });

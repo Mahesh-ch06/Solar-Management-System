@@ -17,6 +17,7 @@ import { config } from '../../config/config.js';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ALLOWED_STAFF_ROLES = ['SALES', 'TECHNICIAN', 'WAREHOUSE_MANAGER', 'SUPPORT_AGENT'];
+const DUMMY_BCRYPT_HASH = '$2a$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012';
 
 export const authController = {
   /**
@@ -36,10 +37,28 @@ export const authController = {
       }
 
       const normalizedEmail = email.trim().toLowerCase();
+      if (!EMAIL_REGEX.test(normalizedEmail)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Please provide a valid email address.',
+          message: 'Please provide a valid email address.',
+        });
+      }
+
+      if (password.length > 128) {
+        return res.status(400).json({
+          success: false,
+          error: 'Password exceeds maximum permitted length (128 characters).',
+          message: 'Password exceeds maximum permitted length (128 characters).',
+        });
+      }
+
       const stmt = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)');
       const user = stmt.get(normalizedEmail);
 
       if (!user) {
+        // Constant-time execution to prevent timing-based user enumeration attacks
+        try { bcrypt.compareSync(password, DUMMY_BCRYPT_HASH); } catch (_) {}
         return res.status(401).json({
           success: false,
           error: 'Invalid email or password.',
@@ -123,10 +142,28 @@ export const authController = {
       }
 
       const normalizedEmail = email.trim().toLowerCase();
+      if (!EMAIL_REGEX.test(normalizedEmail)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Please provide a valid administrator email address.',
+          message: 'Please provide a valid administrator email address.',
+        });
+      }
+
+      if (password.length > 128) {
+        return res.status(400).json({
+          success: false,
+          error: 'Password exceeds maximum permitted length (128 characters).',
+          message: 'Password exceeds maximum permitted length (128 characters).',
+        });
+      }
+
       const stmt = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)');
       const user = stmt.get(normalizedEmail);
 
       if (!user) {
+        // Constant-time execution to prevent timing-based user enumeration attacks
+        try { bcrypt.compareSync(password, DUMMY_BCRYPT_HASH); } catch (_) {}
         return res.status(401).json({
           success: false,
           error: 'Invalid email or password.',
@@ -223,12 +260,25 @@ export const authController = {
         });
       }
 
-      if (!password || typeof password !== 'string' || password.length < 6) {
+      if (!password || typeof password !== 'string' || password.length < 6 || password.length > 128) {
         return res.status(400).json({
           success: false,
-          error: 'Password is required and must be at least 6 characters long.',
-          message: 'Password is required and must be at least 6 characters long.',
+          error: 'Password is required and must be between 6 and 128 characters.',
+          message: 'Password is required and must be between 6 and 128 characters.',
         });
+      }
+
+      let cleanPhone = null;
+      if (phone !== undefined && phone !== null && String(phone).trim() !== '') {
+        const digits = String(phone).trim().replace(/\D/g, '');
+        if (digits.length < 10) {
+          return res.status(400).json({
+            success: false,
+            error: 'Phone number must contain at least 10 digits.',
+            message: 'Phone number must contain at least 10 digits.',
+          });
+        }
+        cleanPhone = String(phone).trim();
       }
 
       const normalizedEmail = email.trim().toLowerCase();
@@ -251,7 +301,6 @@ export const authController = {
 
       const id = `usr-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
       const passwordHash = bcrypt.hashSync(password, 10);
-      const cleanPhone = phone ? String(phone).trim() : null;
       const cleanDept = department ? String(department).trim() : 'Field / Commercial Operations';
 
       const insert = db.prepare(`

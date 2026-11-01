@@ -119,6 +119,19 @@ export const inventoryController = {
         });
       }
 
+      if (currentStock !== undefined && Number(currentStock) < 0) {
+        return res.status(400).json({ success: false, error: 'Current stock cannot be negative.' });
+      }
+      if (lowStockThreshold !== undefined && Number(lowStockThreshold) < 0) {
+        return res.status(400).json({ success: false, error: 'Low stock threshold cannot be negative.' });
+      }
+      if (unitCostPrice !== undefined && Number(unitCostPrice) < 0) {
+        return res.status(400).json({ success: false, error: 'Unit cost price cannot be negative.' });
+      }
+      if (unitSellingPrice !== undefined && Number(unitSellingPrice) < 0) {
+        return res.status(400).json({ success: false, error: 'Unit selling price cannot be negative.' });
+      }
+
       const cleanSku = sku.trim().toUpperCase();
       const existing = db.prepare('SELECT id FROM inventory_items WHERE UPPER(sku) = ?').get(cleanSku);
       if (existing) {
@@ -215,6 +228,19 @@ export const inventoryController = {
         specifications,
         location,
       } = req.body;
+
+      if (currentStock !== undefined && Number(currentStock) < 0) {
+        return res.status(400).json({ success: false, error: 'Current stock cannot be negative.' });
+      }
+      if (lowStockThreshold !== undefined && Number(lowStockThreshold) < 0) {
+        return res.status(400).json({ success: false, error: 'Low stock threshold cannot be negative.' });
+      }
+      if (unitCostPrice !== undefined && Number(unitCostPrice) < 0) {
+        return res.status(400).json({ success: false, error: 'Unit cost price cannot be negative.' });
+      }
+      if (unitSellingPrice !== undefined && Number(unitSellingPrice) < 0) {
+        return res.status(400).json({ success: false, error: 'Unit selling price cannot be negative.' });
+      }
 
       const newCurrentStock = currentStock !== undefined ? Number(currentStock) : existing.currentStock;
       const stockDiff = newCurrentStock - existing.currentStock;

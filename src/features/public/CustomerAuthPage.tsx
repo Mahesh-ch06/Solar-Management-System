@@ -28,9 +28,7 @@ export function getStoredCustomerSession(): Customer | null {
   try {
     const raw = localStorage.getItem(CUSTOMER_SESSION_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    const fresh = customers.find((c) => c.id === parsed.id || c.phone === parsed.phone);
-    return fresh || parsed;
+    return JSON.parse(raw);
   } catch {
     return null;
   }
@@ -75,7 +73,7 @@ export const CustomerAuthPage: React.FC = () => {
   const [registerError, setRegisterError] = useState('');
 
   // Handle Customer Sign-In
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
 
@@ -86,26 +84,29 @@ export const CustomerAuthPage: React.FC = () => {
     }
 
     setIsLoginSubmitting(true);
-    setTimeout(() => {
-      // Find customer by phone, email, or ID
-      const matched = customers.find(
+    try {
+      const customerList = await customerService.getCustomers();
+      const matched = customerList.find(
         (c) =>
-          c.phone.trim().toLowerCase() === query ||
+          c.phone?.trim().toLowerCase() === query ||
           (c.email && c.email.trim().toLowerCase() === query) ||
-          c.id.toLowerCase() === query
+          c.id?.toLowerCase() === query ||
+          (c.phone && c.phone.replace(/\D/g, '') === query.replace(/\D/g, ''))
       );
 
       if (!matched) {
-        setIsLoginSubmitting(false);
         setLoginError('No customer account found with this phone number or email. Please register below.');
         return;
       }
 
       setCustomerSession(matched);
-      setIsLoginSubmitting(false);
       showToast('Welcome Back', `Logged in as ${matched.name}`, 'success');
       navigate('/portal');
-    }, 450);
+    } catch {
+      setLoginError('An error occurred during authentication. Please try again.');
+    } finally {
+      setIsLoginSubmitting(false);
+    }
   };
 
   // Handle Customer Registration / New Solar Application
@@ -122,6 +123,14 @@ export const CustomerAuthPage: React.FC = () => {
     if (cleanPhone.length < 10) {
       setRegisterError('Please provide a valid 10-digit mobile number.');
       return;
+    }
+
+    if (email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        setRegisterError('Please provide a valid email address.');
+        return;
+      }
     }
 
     if (!city.trim()) {

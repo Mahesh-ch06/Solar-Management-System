@@ -297,6 +297,13 @@ export const quotationController = {
         });
       }
 
+      if (Number(capacityKW) <= 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'System capacity (kW) must be greater than 0.',
+        });
+      }
+
       // Resolve Customer Name
       let resolvedCustomerName = customerName;
       const customer = db.prepare('SELECT id, name FROM customers WHERE id = ?').get(customerId);
@@ -438,6 +445,13 @@ export const quotationController = {
         validUntil,
         status,
       } = req.body;
+
+      if (capacityKW !== undefined && Number(capacityKW) <= 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'System capacity (kW) must be greater than 0.',
+        });
+      }
 
       const update = db.prepare(`
         UPDATE quotations SET

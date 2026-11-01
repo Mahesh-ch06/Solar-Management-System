@@ -13,6 +13,8 @@ import express from 'express';
 import cors from 'cors';
 import { config } from './config/config.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { securityHeaders } from './middleware/securityHeaders.js';
+import { createRateLimiter } from './middleware/rateLimiter.js';
 
 // Module Routes
 import authRoutes from './modules/auth/auth.routes.js';
@@ -30,13 +32,24 @@ import dashboardRoutes from './modules/dashboard/dashboard.routes.js';
 
 const app = express();
 
+// Security Hardening & Hygiene
+app.disable('x-powered-by');
+app.use(securityHeaders);
+
 // Standard Middlewares
 app.use(cors({
   origin: true, // Allow frontend during local dev
   credentials: true,
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// Dedicated Authentication Rate Limiter (Protects against brute force login attempts)
+const authLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 30, // 30 requests per minute
+  message: 'Too many authentication attempts. Please wait 60 seconds before trying again.',
+});
 
 // Health Check Endpoint
 const healthHandler = (req, res) => {
@@ -55,8 +68,8 @@ app.get('/api/health', healthHandler);
 // ==============================================================================
 
 // Member 1: Authentication & User Management
-app.use('/api/v1/auth', authRoutes);
-app.use('/api/auth', authRoutes);
+app.use('/api/v1/auth', authLimiter, authRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/v1/users', adminRoutes);

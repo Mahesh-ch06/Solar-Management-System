@@ -44,9 +44,18 @@ export const LeadCaptureForm: React.FC = () => {
       return;
     }
 
-    if (phone.trim().length < 10) {
+    const cleanPhone = phone.trim().replace(/\D/g, '');
+    if (cleanPhone.length < 10) {
       showToast('Invalid Phone', 'Please provide a valid 10-digit mobile number.', 'error');
       return;
+    }
+
+    if (email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        showToast('Invalid Email', 'Please enter a valid email address.', 'error');
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -54,8 +63,8 @@ export const LeadCaptureForm: React.FC = () => {
     try {
       const created = await customerService.addCustomer({
         name: name.trim(),
-        phone: phone.trim(),
-        email: email.trim() || `${phone.trim()}@sunpower.customer`,
+        phone: cleanPhone,
+        email: email.trim() || `${cleanPhone}@sunpower.customer`,
         address: address.trim() || `${city}, North India`,
         city: city.trim(),
         pincode: pincode.trim() || '110001',

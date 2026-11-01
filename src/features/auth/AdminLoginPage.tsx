@@ -24,9 +24,16 @@ export const AdminLoginPage: React.FC = () => {
       return;
     }
 
+    const trimmedEmail = email.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setErrorMessage('Please enter a valid administrator email address.');
+      return;
+    }
+
     try {
       setIsSubmitting(true);
-      const result = await login({ email, password }, true);
+      const result = await login({ email: trimmedEmail, password }, true);
 
       if (!result.success) {
         setErrorMessage(result.error || 'Authentication denied. Verify administrator credentials.');
