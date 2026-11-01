@@ -25,9 +25,9 @@ export const AdminLoginPage: React.FC = () => {
     }
 
     const trimmedEmail = email.trim().toLowerCase();
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@(gmail\.com|sunpowersolutions\.in)$/i;
     if (!emailRegex.test(trimmedEmail)) {
-      setErrorMessage('Please enter a valid administrator email address.');
+      setErrorMessage('Please enter a valid administrator Gmail address (ending in @gmail.com).');
       return;
     }
 

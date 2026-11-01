@@ -15,7 +15,7 @@ import jwt from 'jsonwebtoken';
 import { db } from '../../db/database.js';
 import { config } from '../../config/config.js';
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@(gmail\.com|sunpowersolutions\.in)$/i;
 const ALLOWED_STAFF_ROLES = ['SALES', 'TECHNICIAN', 'WAREHOUSE_MANAGER', 'SUPPORT_AGENT'];
 const DUMMY_BCRYPT_HASH = '$2a$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012';
 
@@ -40,8 +40,8 @@ export const authController = {
       if (!EMAIL_REGEX.test(normalizedEmail)) {
         return res.status(400).json({
           success: false,
-          error: 'Please provide a valid email address.',
-          message: 'Please provide a valid email address.',
+          error: 'Please provide a valid Gmail address (ending in @gmail.com).',
+          message: 'Please provide a valid Gmail address (ending in @gmail.com).',
         });
       }
 
@@ -145,8 +145,8 @@ export const authController = {
       if (!EMAIL_REGEX.test(normalizedEmail)) {
         return res.status(400).json({
           success: false,
-          error: 'Please provide a valid administrator email address.',
-          message: 'Please provide a valid administrator email address.',
+          error: 'Please provide a valid administrator Gmail address (ending in @gmail.com).',
+          message: 'Please provide a valid administrator Gmail address (ending in @gmail.com).',
         });
       }
 
@@ -255,8 +255,8 @@ export const authController = {
       if (!email || typeof email !== 'string' || !EMAIL_REGEX.test(email.trim())) {
         return res.status(400).json({
           success: false,
-          error: 'A valid email address is required.',
-          message: 'A valid email address is required.',
+          error: 'A valid Gmail address (ending in @gmail.com) is required.',
+          message: 'A valid Gmail address (ending in @gmail.com) is required.',
         });
       }
 

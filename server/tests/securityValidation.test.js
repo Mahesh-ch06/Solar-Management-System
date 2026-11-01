@@ -85,8 +85,20 @@ describe('🛡️ Security & Input Validation Hardening Test Suite', () => {
         const data = await res.json();
         assert.equal(res.status, 400);
         assert.equal(data.success, false);
-        assert.match(data.error, /valid email/i);
+        assert.match(data.error, /gmail/i);
       }
+    });
+
+    test('POST /api/v1/auth/login rejects non-gmail domains like nikhil@abc.com with 400', async () => {
+      const res = await fetch(`${baseUrl}/api/v1/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'nikhil@abc.com', password: 'Password@123' }),
+      });
+      const data = await res.json();
+      assert.equal(res.status, 400);
+      assert.equal(data.success, false);
+      assert.match(data.error, /gmail\.com/i);
     });
 
     test('POST /api/v1/auth/login rejects excessively long passwords (>128 chars anti-DoS)', async () => {
@@ -148,7 +160,7 @@ describe('🛡️ Security & Input Validation Hardening Test Suite', () => {
         body: JSON.stringify({
           name: 'Invalid Email Customer',
           phone: '9876543210',
-          email: 'bad-email-format',
+          email: 'nikhil@abc.com',
           address: '123 Solar Street',
           city: 'Delhi',
           pincode: '110001',
@@ -159,7 +171,7 @@ describe('🛡️ Security & Input Validation Hardening Test Suite', () => {
       const data = await res.json();
       assert.equal(res.status, 400);
       assert.equal(data.success, false);
-      assert.match(data.error, /valid email/i);
+      assert.match(data.error, /gmail/i);
     });
 
     test('POST /api/v1/customers rejects invalid phone (< 10 digits)', async () => {

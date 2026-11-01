@@ -51,9 +51,9 @@ export const LeadCaptureForm: React.FC = () => {
     }
 
     if (email.trim()) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/i;
       if (!emailRegex.test(email.trim())) {
-        showToast('Invalid Email', 'Please enter a valid email address.', 'error');
+        showToast('Invalid Email', 'Please enter a valid Gmail address (ending in @gmail.com).', 'error');
         return;
       }
     }

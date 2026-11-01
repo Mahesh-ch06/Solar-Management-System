@@ -79,8 +79,16 @@ export const CustomerAuthPage: React.FC = () => {
 
     const query = loginPhoneOrEmail.trim().toLowerCase();
     if (!query) {
-      setLoginError('Please enter your registered mobile number or email.');
+      setLoginError('Please enter your registered mobile number or Gmail address.');
       return;
+    }
+
+    if (query.includes('@')) {
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/i;
+      if (!emailRegex.test(query)) {
+        setLoginError('Only @gmail.com email addresses are allowed.');
+        return;
+      }
     }
 
     setIsLoginSubmitting(true);
@@ -126,9 +134,9 @@ export const CustomerAuthPage: React.FC = () => {
     }
 
     if (email.trim()) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/i;
       if (!emailRegex.test(email.trim())) {
-        setRegisterError('Please provide a valid email address.');
+        setRegisterError('Please provide a valid Gmail address (ending in @gmail.com).');
         return;
       }
     }

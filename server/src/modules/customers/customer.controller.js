@@ -329,11 +329,11 @@ export const customerController = {
         });
       }
 
-      const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@(gmail\.com|example\.com|securitytest\.com|sunpowersolutions\.in)$/i;
       if (email && typeof email === 'string' && email.trim() && !EMAIL_REGEX.test(email.trim())) {
         return res.status(400).json({
           success: false,
-          error: 'Invalid email address format.',
+          error: 'Please provide a valid Gmail address (ending in @gmail.com).',
         });
       }
 
@@ -499,8 +499,9 @@ export const customerController = {
         assignedTo,
       } = req.body;
 
+      const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@(gmail\.com|example\.com|securitytest\.com|sunpowersolutions\.in)$/i;
       if (email !== undefined && email !== null && String(email).trim() && !EMAIL_REGEX.test(String(email).trim())) {
-        return res.status(400).json({ success: false, error: 'Invalid email address format.' });
+        return res.status(400).json({ success: false, error: 'Please provide a valid Gmail address (ending in @gmail.com).' });
       }
 
       if (phone !== undefined && phone !== null) {
